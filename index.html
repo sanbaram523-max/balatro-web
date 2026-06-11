@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>웹라트로 — 포커 덱빌딩 로그라이크</title>
+<style>
+/* ============================================================
+   스타일 (Milestone 1, 6 — 카드 UI, 애니메이션, 반응형)
+   ============================================================ */
+:root {
+  --bg: #1a3a2a;
+  --bg-dark: #122b1f;
+  --panel: #1f2937;
+  --panel-light: #2d3b4e;
+  --gold: #f5c542;
+  --red: #e05252;
+  --blue: #4a9eda;
+  --text: #f0ead6;
+  --card-w: 72px;
+  --card-h: 104px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: radial-gradient(ellipse at center, var(--bg) 0%, var(--bg-dark) 100%);
+  color: var(--text);
+  font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button {
+  font-family: inherit;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.1s, filter 0.1s;
+}
+button:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-2px); }
+button:active:not(:disabled) { transform: translateY(0); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ---------- 시작 / 게임오버 화면 ---------- */
+#startScreen, #gameoverScreen {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 24px;
+}
+.title-big {
+  font-size: clamp(48px, 10vw, 96px);
+  color: var(--gold);
+  text-shadow: 4px 4px 0 #00000088;
+  letter-spacing: 4px;
+}
+.subtitle { font-size: 18px; opacity: 0.8; }
+.btn-primary {
+  background: var(--red);
+  color: #fff;
+  font-size: 22px;
+  padding: 16px 48px;
+  box-shadow: 0 4px 0 #a03030;
+}
+.btn-blue {
+  background: var(--blue);
+  color: #fff;
+  font-size: 18px;
+  padding: 12px 32px;
+  box-shadow: 0 4px 0 #2e6e9e;
+}
+#gameoverStats {
+  background: #00000044;
+  padding: 20px 40px;
+  border-radius: 12px;
+  font-size: 20px;
+  line-height: 1.8;
+}
+
+/* ---------- 게임 화면 레이아웃 ---------- */
+#gameScreen { padding: 12px; gap: 10px; max-width: 980px; margin: 0 auto; width: 100%; }
+
+#topBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+.info-box {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 8px 14px;
+  text-align: center;
+  flex: 1;
+  min-width: 90px;
+}
+.info-box .label { font-size: 11px; opacity: 0.65; text-transform: uppercase; letter-spacing: 1px; }
+.info-box .value { font-size: 20px; font-weight: 700; }
+.info-box .value.gold-text { color: var(--gold); }
+.info-box .value.red-text { color: var(--red); }
+.info-box .value.blue-text { color: var(--blue); }
+
+#blindBox {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 2.5;
+  min-width: 220px;
+}
+#blindBadge {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: inset 0 -4px 0 #00000044;
+}
+.blind-small #blindBadge { background: #3b82c4; }
+.blind-big   #blindBadge { background: #d4a017; }
+.blind-boss  #blindBadge { background: #b03060; }
+#blindInfo { flex: 1; }
+#blindName { font-weight: 700; font-size: 15px; }
+#blindDesc { font-size: 11px; color: #ff9e9e; min-height: 0; }
+.card.debuffed { filter: grayscale(0.85); opacity: 0.55; }
+#progressWrap {
+  background: #00000066;
+  height: 18px;
+  border-radius: 9px;
+  margin-top: 6px;
+  overflow: hidden;
+  position: relative;
+}
+#progressFill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--blue), var(--gold));
+  border-radius: 9px;
+  transition: width 0.5s ease;
+}
+#progressText {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 1px 1px 2px #000;
+}
+
+/* ---------- 조커 영역 ---------- */
+#jokerArea {
+  background: #00000033;
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-height: 96px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+#jokerArea .area-label {
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  opacity: 0.5;
+  letter-spacing: 2px;
+}
+.joker-card {
+  width: 110px;
+  min-height: 78px;
+  background: linear-gradient(145deg, var(--j-c1, #5a3d8a), var(--j-c2, #3d2960));
+  border: 2px solid var(--j-border, #8a6cc0);
+  border-radius: 10px;
+  padding: 7px 9px;
+  font-size: 11px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.joker-card .j-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+  filter: drop-shadow(1px 2px 1px #00000066);
+}
+.joker-card .j-text { flex: 1; min-width: 0; }
+.joker-card .j-name { font-weight: 700; color: var(--gold); font-size: 12px; margin-bottom: 3px; }
+.joker-card .j-desc { opacity: 0.9; line-height: 1.35; }
+.joker-card.pop { animation: jokerPop 0.35s ease; }
+@keyframes jokerPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12) rotate(-2deg); }
+  100% { transform: scale(1); }
+}
+.joker-slot-empty {
+  width: 110px; min-height: 78px;
+  border: 2px dashed #ffffff22;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* ---------- 플레이 영역 (낸 카드 + 점수) ---------- */
+#playArea {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+#playedCards { display: flex; gap: 8px; min-height: 110px; align-items: center; }
+#handResult {
+  font-size: 18px;
+  font-weight: 700;
+  min-height: 26px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+#handResult .chips { color: var(--blue); }
+#handResult .mult { color: var(--red); }
+#handResult .total { color: var(--gold); font-size: 24px; }
+
+.score-popup {
+  position: absolute;
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--gold);
+  text-shadow: 3px 3px 0 #000;
+  pointer-events: none;
+  animation: scoreJump 1.1s ease-out forwards;
+  z-index: 50;
+}
+@keyframes scoreJump {
+  0%   { transform: translateY(0) scale(0.4); opacity: 0; }
+  20%  { transform: translateY(-26px) scale(1.25); opacity: 1; }
+  60%  { transform: translateY(-40px) scale(1); opacity: 1; }
+  100% { transform: translateY(-72px) scale(0.95); opacity: 0; }
+}
+
+/* ---------- 카드 ---------- */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  background: #f7f3e8;
+  border-radius: 8px;
+  color: #222;
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 3px 6px #00000066;
+  transition: transform 0.18s ease, box-shadow 0.18s;
+  flex-shrink: 0;
+  transform-style: preserve-3d;
+}
+/* 4색 덱: 스페이드=검정, 하트=빨강, 다이아=파랑, 클럽=초록 */
+.card.suit-spade   { color: #23262e; }
+.card.suit-heart   { color: #c0392b; }
+.card.suit-diamond { color: #1d6fb8; }
+.card.suit-club    { color: #1e7d3c; }
+/* 그림 카드 (J/Q/K) */
+.card .face-frame {
+  position: absolute;
+  top: 22%; bottom: 22%; left: 18%; right: 18%;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  background: linear-gradient(160deg, transparent 0%, currentColor 400%);
+}
+.card .face-frame::before,
+.card .face-frame::after {
+  content: attr(data-suit);
+  position: absolute;
+  font-size: 9px;
+}
+.card .face-frame::before { top: 1px; left: 3px; }
+.card .face-frame::after  { bottom: 1px; right: 3px; transform: rotate(180deg); }
+.card .corner {
+  position: absolute;
+  top: 5px; left: 7px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: center;
+}
+.card .corner.bottom {
+  top: auto; left: auto;
+  bottom: 5px; right: 7px;
+  transform: rotate(180deg);
+}
+.card .pip {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+}
+.card.selected {
+  transform: translateY(-22px);
+  box-shadow: 0 10px 16px #000000aa, 0 0 0 3px var(--gold);
+}
+.card.dealt { animation: dealIn 0.4s ease backwards; }
+@keyframes dealIn {
+  from { transform: translateX(120px) rotateY(90deg); opacity: 0; }
+  to   { transform: translateX(0) rotateY(0deg); opacity: 1; }
+}
+.card.played-anim { animation: playUp 0.35s ease backwards; cursor: default; }
+@keyframes playUp {
+  from { transform: translateY(60px) scale(0.8); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+#handArea {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 4px 8px;
+  min-height: calc(var(--card-h) + 30px);
+  flex-wrap: nowrap;
+}
+
+/* ---------- 하단 버튼 ---------- */
+#actionBar {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+#playBtn {
+  background: var(--blue);
+  color: #fff;
+  font-size: 18px;
+  padding: 14px 36px;
+  box-shadow: 0 4px 0 #2e6e9e;
+}
+#discardBtn {
+  background: var(--red);
+  color: #fff;
+  font-size: 18px;
+  padding: 14px 36px;
+  box-shadow: 0 4px 0 #a03030;
+}
+#sortBtn {
+  background: var(--panel-light);
+  color: var(--text);
+  font-size: 14px;
+  padding: 14px 18px;
+}
+#deckCount { font-size: 12px; opacity: 0.6; text-align: center; padding-bottom: 10px; }
+
+/* ---------- 상점 ---------- */
+#shopScreen { align-items: center; justify-content: center; gap: 20px; padding: 20px; }
+#shopScreen h2 { color: var(--gold); font-size: 36px; text-shadow: 3px 3px 0 #00000066; }
+#shopGold { font-size: 20px; }
+#shopGold b { color: var(--gold); }
+#shopItems { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.shop-item {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 14px;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.shop-item .joker-card { width: 100%; }
+.shop-item.sold-out { opacity: 0.35; }
+.buy-btn {
+  background: var(--gold);
+  color: #222;
+  padding: 8px 22px;
+  font-size: 15px;
+  width: 100%;
+}
+#ownedJokers {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  background: #00000033;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 100px;
+  max-width: 700px;
+}
+.sell-btn {
+  background: #777;
+  color: #fff;
+  font-size: 10px;
+  padding: 3px 8px;
+  margin-top: 5px;
+}
+.shop-note { font-size: 13px; opacity: 0.6; }
+
+/* ---------- 라운드 클리어 배너 ---------- */
+#clearBanner {
+  position: fixed;
+  inset: 0;
+  background: #000000bb;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 100;
+}
+#clearBanner.show { display: flex; animation: fadeIn 0.3s; }
+#clearBanner h2 { font-size: 48px; color: var(--gold); text-shadow: 4px 4px 0 #000; }
+#clearBanner .reward { font-size: 22px; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- 모바일 반응형 ---------- */
+@media (max-width: 640px) {
+  :root { --card-w: 44px; --card-h: 66px; }
+  .card .corner { font-size: 11px; top: 3px; left: 4px; }
+  .card .corner.bottom { bottom: 3px; right: 4px; }
+  .card .pip { font-size: 18px; }
+  .card .face-frame { font-size: 19px; }
+  .card .face-frame::before, .card .face-frame::after { font-size: 6px; }
+  .info-box .value { font-size: 15px; }
+  .joker-card { width: 88px; font-size: 10px; min-height: 68px; flex-direction: column; gap: 2px; text-align: center; }
+  .joker-card .j-icon { font-size: 18px; }
+  .joker-slot-empty { width: 88px; min-height: 68px; }
+  #playBtn, #discardBtn { font-size: 15px; padding: 12px 22px; }
+  #handArea { gap: 3px; }
+  .title-big { letter-spacing: 1px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== 시작 화면 ===================== -->
+<div id="startScreen" class="screen active">
+  <div class="title-big">웹라트로</div>
+  <div class="subtitle">포커 패 × 조커 × 덱빌딩 로그라이크</div>
+  <button id="newGameBtn" class="btn-primary">새 게임</button>
+  <div class="subtitle" style="font-size:13px; max-width:420px; line-height:1.7;">
+    8장 중 최대 5장으로 포커 패를 만들어 점수를 모으세요.<br>
+    조커를 사 모아 점점 높아지는 목표 점수를 버텨내세요!
+  </div>
+</div>
+
+<!-- ===================== 게임 화면 ===================== -->
+<div id="gameScreen" class="screen">
+  <div id="topBar">
+    <div id="blindBox" class="blind-small">
+      <div id="blindBadge">🎯</div>
+      <div id="blindInfo">
+        <div id="blindName">스몰 블라인드</div>
+        <div id="blindDesc"></div>
+        <div id="progressWrap">
+          <div id="progressFill"></div>
+          <div id="progressText">0 / 300</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-box"><div class="label">앤티</div><div class="value" id="anteVal">1</div></div>
+    <div class="info-box"><div class="label">패 내기</div><div class="value blue-text" id="handsVal">4</div></div>
+    <div class="info-box"><div class="label">버리기</div><div class="value red-text" id="discardsVal">3</div></div>
+    <div class="info-box"><div class="label">골드</div><div class="value gold-text" id="goldVal">0</div></div>
+  </div>
+
+  <div id="jokerArea">
+    <span class="area-label">조커</span>
+    <!-- 조커 카드들이 렌더링됨 -->
+  </div>
+
+  <div id="playArea">
+    <div id="playedCards"></div>
+    <div id="handResult"></div>
+  </div>
+
+  <div id="handArea"></div>
+
+  <div id="actionBar">
+    <button id="playBtn">패 내기</button>
+    <button id="sortBtn">정렬 ⇄</button>
+    <button id="discardBtn">버리기</button>
+  </div>
+  <div id="deckCount">덱: 44장</div>
+</div>
+
+<!-- ===================== 상점 화면 ===================== -->
+<div id="shopScreen" class="screen">
+  <h2>🛒 상점</h2>
+  <div id="shopGold">보유 골드: <b>0</b>G</div>
+  <div id="shopItems"></div>
+  <button id="rerollBtn" class="btn-blue" style="font-size:14px; padding:8px 22px;">🎲 새로고침 $5</button>
+  <div class="shop-note">보유 조커 (최대 5개) — 판매하면 판매가를 돌려받습니다</div>
+  <div id="ownedJokers"></div>
+  <button id="nextRoundBtn" class="btn-blue">다음 라운드 ▶</button>
+</div>
+
+<!-- ===================== 승리 화면 ===================== -->
+<div id="victoryScreen" class="screen" style="align-items:center; justify-content:center; text-align:center; gap:24px;">
+  <div class="title-big" style="color:var(--gold)">🏆 승리!</div>
+  <div id="victoryStats" style="background:#00000044; padding:20px 40px; border-radius:12px; font-size:20px; line-height:1.8;"></div>
+  <button id="endlessBtn" class="btn-blue">무한 모드 계속 ▶</button>
+  <button id="victoryNewBtn" class="btn-primary">새 게임</button>
+</div>
+
+<!-- ===================== 게임오버 화면 ===================== -->
+<div id="gameoverScreen" class="screen">
+  <div class="title-big" style="color:var(--red)">게임 오버</div>
+  <div id="gameoverStats"></div>
+  <button id="retryBtn" class="btn-primary">다시 도전</button>
+</div>
+
+<!-- ===================== 라운드 클리어 배너 ===================== -->
+<div id="clearBanner">
+  <h2>라운드 클리어!</h2>
+  <div class="reward" id="clearReward"></div>
+  <button id="toShopBtn" class="btn-blue">상점으로 ▶</button>
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   constants — 카드 데이터, 패 점수표, 조커 목록 (Milestone 2, 4)
+   ============================================================ */
+// 4색 덱: 무늬마다 색이 다르다 (CSS의 .suit-* 클래스와 짝)
+const SUITS = [
+  { key: 'spade',   sym: '♠' },
+  { key: 'heart',   sym: '♥' },
+  { key: 'diamond', sym: '♦' },
+  { key: 'club',    sym: '♣' },
+];
+
+// 그림 카드(J/Q/K) 중앙 일러스트
+const FACE_ART = { J: '🤵', Q: '👸', K: '🤴' };
+const RANKS = [
+  { rank: '2',  value: 2,  chips: 2  },
+  { rank: '3',  value: 3,  chips: 3  },
+  { rank: '4',  value: 4,  chips: 4  },
+  { rank: '5',  value: 5,  chips: 5  },
+  { rank: '6',  value: 6,  chips: 6  },
+  { rank: '7',  value: 7,  chips: 7  },
+  { rank: '8',  value: 8,  chips: 8  },
+  { rank: '9',  value: 9,  chips: 9  },
+  { rank: '10', value: 10, chips: 10 },
+  { rank: 'J',  value: 11, chips: 10 },
+  { rank: 'Q',  value: 12, chips: 10 },
+  { rank: 'K',  value: 13, chips: 10 },
+  { rank: 'A',  value: 14, chips: 11 },
+];
+
+// 패 종류 (낮은 순) — rank 숫자가 클수록 강한 패
+// upChips/upMult: 행성 카드로 레벨업할 때마다 증가하는 칩/배수 (발라트로 원작 수치)
+// levelKey: 레벨을 공유하는 키 (로열 플러시는 스트레이트 플러시와 레벨 공유)
+const HAND_TYPES = {
+  HIGH_CARD:      { rank: 0, name: '하이카드',           base: 5,   mult: 1, upChips: 10, upMult: 1, levelKey: 'HIGH_CARD' },
+  PAIR:           { rank: 1, name: '원 페어',            base: 10,  mult: 2, upChips: 15, upMult: 1, levelKey: 'PAIR' },
+  TWO_PAIR:       { rank: 2, name: '투 페어',            base: 20,  mult: 2, upChips: 20, upMult: 1, levelKey: 'TWO_PAIR' },
+  TRIPLE:         { rank: 3, name: '트리플',             base: 30,  mult: 3, upChips: 20, upMult: 2, levelKey: 'TRIPLE' },
+  STRAIGHT:       { rank: 4, name: '스트레이트',         base: 30,  mult: 4, upChips: 30, upMult: 3, levelKey: 'STRAIGHT' },
+  FLUSH:          { rank: 5, name: '플러시',             base: 35,  mult: 4, upChips: 15, upMult: 2, levelKey: 'FLUSH' },
+  FULL_HOUSE:     { rank: 6, name: '풀하우스',           base: 40,  mult: 4, upChips: 25, upMult: 2, levelKey: 'FULL_HOUSE' },
+  FOUR_KIND:      { rank: 7, name: '포카드',             base: 60,  mult: 7, upChips: 30, upMult: 3, levelKey: 'FOUR_KIND' },
+  STRAIGHT_FLUSH: { rank: 8, name: '스트레이트 플러시',  base: 100, mult: 8, upChips: 40, upMult: 4, levelKey: 'STRAIGHT_FLUSH' },
+  ROYAL_FLUSH:    { rank: 9, name: '로열 플러시',        base: 100, mult: 8, upChips: 40, upMult: 4, levelKey: 'STRAIGHT_FLUSH' },
+};
+
+// 족보 레벨 적용 수치
+function handLevel(type) { return (state && state.handLevels[type.levelKey]) || 1; }
+function handChipsOf(type) { return type.base + type.upChips * (handLevel(type) - 1); }
+function handMultOf(type) { return type.mult + type.upMult * (handLevel(type) - 1); }
+
+// 행성 카드 — 해당 족보의 레벨을 +1 (발라트로 원작 매핑)
+const PLANETS = [
+  { id: 'pluto',   name: '명왕성', icon: '🌑', key: 'HIGH_CARD' },
+  { id: 'mercury', name: '수성',   icon: '🪨', key: 'PAIR' },
+  { id: 'uranus',  name: '천왕성', icon: '🧊', key: 'TWO_PAIR' },
+  { id: 'venus',   name: '금성',   icon: '🌕', key: 'TRIPLE' },
+  { id: 'saturn',  name: '토성',   icon: '🪐', key: 'STRAIGHT' },
+  { id: 'jupiter', name: '목성',   icon: '🟠', key: 'FLUSH' },
+  { id: 'earth',   name: '지구',   icon: '🌍', key: 'FULL_HOUSE' },
+  { id: 'mars',    name: '화성',   icon: '🔴', key: 'FOUR_KIND' },
+  { id: 'neptune', name: '해왕성', icon: '🔵', key: 'STRAIGHT_FLUSH' },
+];
+const PLANET_COST = 3;
+
+const MAX_JOKERS = 5;
+const HANDS_PER_ROUND = 4;
+const DISCARDS_PER_ROUND = 3;
+const HAND_SIZE = 8;
+const MAX_SELECT = 5;
+
+/* ---------- 조커 공통 헬퍼 ---------- */
+function hasJoker(id) { return !!(state && state.jokers.some(j => j.id === id)); }
+function isFaceCard(c) { return c.rank === 'J' || c.rank === 'Q' || c.rank === 'K' || hasJoker('pareidolia'); }
+function chance(n) { // n분의 1 확률 ('이런! 모두 6이야' 보유 시 2배)
+  if (hasJoker('oops')) n = Math.max(1, n / 2);
+  return Math.random() < 1 / n;
+}
+function scoring(cards) { return cards.filter(c => !isDebuffed(c)); } // 디버프 카드는 조커 발동 제외
+function randSuit() { return SUITS[Math.floor(Math.random() * 4)].key; }
+function randRank() { return RANKS[Math.floor(Math.random() * RANKS.length)].rank; }
+const SUIT_SYM = { spade: '♠', heart: '♥', diamond: '♦', club: '♣' };
+const BASIC_HAND_KEYS = ['HIGH_CARD','PAIR','TWO_PAIR','TRIPLE','STRAIGHT','FLUSH','FULL_HOUSE','FOUR_KIND'];
+function levelUpHand(levelKey, n = 1) {
+  state.handLevels[levelKey] = (state.handLevels[levelKey] || 1) + n;
+}
+function jokerSum(field) { return state.jokers.reduce((s, j) => s + (j[field] || 0), 0); }
+function destroyJoker(j) {
+  const i = state.jokers.indexOf(j);
+  if (i >= 0) state.jokers.splice(i, 1);
+}
+function makeJoker(def) {
+  return Object.assign(Object.create(Object.getPrototypeOf(def)), def, {
+    vars: JSON.parse(JSON.stringify(def.vars || {})),
+    sellValue: Math.max(1, Math.ceil(def.cost / 2)),
+  });
+}
+
+const RARITIES = {
+  common:    { name: '일반', color: '#5aa8e0' },
+  uncommon:  { name: '희귀', color: '#42c060' },
+  rare:      { name: '레어', color: '#e05252' },
+  legendary: { name: '전설', color: '#c45ae0' },
+};
+const RARITY_WEIGHTS = [['common', 70], ['uncommon', 24], ['rare', 5], ['legendary', 1]];
+
+// 조커 목록 — 발라트로 원작 기준 (우리 시스템에 없는 기능 참조 조커는 제외/변형)
+// apply(ctx): 점수 계산 시 호출. ctx = { hand, cards, state, chips, mult, cardChips }
+// afterPlay / onDiscard / onRoundStart / onRoundEnd / onBossDefeat / onSell: 이벤트 훅
+// handsMod / discardsMod / handSizeMod: 보유 중 패 내기·버리기·손패 크기 보정
+const JOKERS = [
+  /* ===== 일반 (Common) ===== */
+  { id: 'joker', name: '조커', icon: '🃏', rarity: 'common', cost: 2,
+    desc: '배수 +4',
+    apply(ctx) { ctx.mult += 4; return '배수 +4'; } },
+  { id: 'greedy', name: '욕심쟁이 조커', icon: '💎', rarity: 'common', cost: 5,
+    desc: '낸 ♦ 1장당 배수 +3',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'diamond').length; if (n) { ctx.mult += 3 * n; return `배수 +${3 * n}`; } } },
+  { id: 'lusty', name: '욕정의 조커', icon: '❤️', rarity: 'common', cost: 5,
+    desc: '낸 ♥ 1장당 배수 +3',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'heart').length; if (n) { ctx.mult += 3 * n; return `배수 +${3 * n}`; } } },
+  { id: 'wrathful', name: '분노의 조커', icon: '🗡️', rarity: 'common', cost: 5,
+    desc: '낸 ♠ 1장당 배수 +3',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'spade').length; if (n) { ctx.mult += 3 * n; return `배수 +${3 * n}`; } } },
+  { id: 'gluttonous', name: '폭식의 조커', icon: '🍔', rarity: 'common', cost: 5,
+    desc: '낸 ♣ 1장당 배수 +3',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'club').length; if (n) { ctx.mult += 3 * n; return `배수 +${3 * n}`; } } },
+  { id: 'jolly', name: '졸리 조커', icon: '🤡', rarity: 'common', cost: 3,
+    desc: '페어 포함 시 배수 +8',
+    apply(ctx) { if (ctx.hand.hasPair) { ctx.mult += 8; return '배수 +8'; } } },
+  { id: 'zany', name: '괴짜 조커', icon: '🤪', rarity: 'common', cost: 4,
+    desc: '트리플 포함 시 배수 +12',
+    apply(ctx) { if (ctx.hand.hasTrips) { ctx.mult += 12; return '배수 +12'; } } },
+  { id: 'mad', name: '광기 조커', icon: '🤬', rarity: 'common', cost: 4,
+    desc: '투 페어 포함 시 배수 +10',
+    apply(ctx) { if (ctx.hand.hasTwoPair) { ctx.mult += 10; return '배수 +10'; } } },
+  { id: 'crazy', name: '광란 조커', icon: '🥴', rarity: 'common', cost: 4,
+    desc: '스트레이트 포함 시 배수 +12',
+    apply(ctx) { if (ctx.hand.hasStraight) { ctx.mult += 12; return '배수 +12'; } } },
+  { id: 'droll', name: '우스개 조커', icon: '😜', rarity: 'common', cost: 4,
+    desc: '플러시 포함 시 배수 +10',
+    apply(ctx) { if (ctx.hand.hasFlush) { ctx.mult += 10; return '배수 +10'; } } },
+  { id: 'sly', name: '교활한 조커', icon: '🦊', rarity: 'common', cost: 3,
+    desc: '페어 포함 시 칩 +50',
+    apply(ctx) { if (ctx.hand.hasPair) { ctx.chips += 50; return '칩 +50'; } } },
+  { id: 'wily', name: '능구렁이 조커', icon: '🐍', rarity: 'common', cost: 4,
+    desc: '트리플 포함 시 칩 +100',
+    apply(ctx) { if (ctx.hand.hasTrips) { ctx.chips += 100; return '칩 +100'; } } },
+  { id: 'clever', name: '영리한 조커', icon: '🧠', rarity: 'common', cost: 4,
+    desc: '투 페어 포함 시 칩 +80',
+    apply(ctx) { if (ctx.hand.hasTwoPair) { ctx.chips += 80; return '칩 +80'; } } },
+  { id: 'devious', name: '음흉한 조커', icon: '😏', rarity: 'common', cost: 4,
+    desc: '스트레이트 포함 시 칩 +100',
+    apply(ctx) { if (ctx.hand.hasStraight) { ctx.chips += 100; return '칩 +100'; } } },
+  { id: 'crafty', name: '교묘한 조커', icon: '🛠️', rarity: 'common', cost: 4,
+    desc: '플러시 포함 시 칩 +80',
+    apply(ctx) { if (ctx.hand.hasFlush) { ctx.chips += 80; return '칩 +80'; } } },
+  { id: 'half', name: '반쪽 조커', icon: '🌗', rarity: 'common', cost: 5,
+    desc: '3장 이하로 내면 배수 +20',
+    apply(ctx) { if (ctx.cards.length <= 3) { ctx.mult += 20; return '배수 +20'; } } },
+  { id: 'credit_card', name: '신용카드', icon: '💳', rarity: 'common', cost: 1,
+    desc: '골드를 -$20까지 빚질 수 있음' },
+  { id: 'banner', name: '깃발', icon: '🚩', rarity: 'common', cost: 5,
+    desc: '남은 버리기 1회당 칩 +30',
+    apply(ctx) { const n = state.discardsLeft; if (n) { ctx.chips += 30 * n; return `칩 +${30 * n}`; } } },
+  { id: 'mystic_summit', name: '신비한 정상', icon: '🏔️', rarity: 'common', cost: 5,
+    desc: '버리기가 0회 남았을 때 배수 +15',
+    apply(ctx) { if (state.discardsLeft === 0) { ctx.mult += 15; return '배수 +15'; } } },
+  { id: 'misprint', name: '미스프린트', icon: '🖨️', rarity: 'common', cost: 4,
+    desc: '배수 +0~23 (무작위)',
+    apply(ctx) { const m = Math.floor(Math.random() * 24); ctx.mult += m; return `배수 +${m}`; } },
+  { id: 'raised_fist', name: '치켜든 주먹', icon: '✊', rarity: 'common', cost: 5,
+    desc: '손에 남은 최저 랭크 카드 칩×2 만큼 배수 +',
+    apply(ctx) { if (!state.hand.length) return; const low = state.hand.reduce((a, b) => a.value <= b.value ? a : b); ctx.mult += low.chips * 2; return `배수 +${low.chips * 2}`; } },
+  { id: 'chaos', name: '혼돈의 광대', icon: '🌀', rarity: 'common', cost: 4,
+    desc: '상점마다 새로고침 1회 무료' },
+  { id: 'scary_face', name: '무서운 얼굴', icon: '😱', rarity: 'common', cost: 4,
+    desc: '낸 그림 카드 1장당 칩 +30',
+    apply(ctx) { const n = scoring(ctx.cards).filter(isFaceCard).length; if (n) { ctx.chips += 30 * n; return `칩 +${30 * n}`; } } },
+  { id: 'abstract', name: '추상 조커', icon: '🎨', rarity: 'common', cost: 4,
+    desc: '보유 조커 1개당 배수 +3',
+    apply(ctx) { const n = state.jokers.length; ctx.mult += 3 * n; return `배수 +${3 * n}`; } },
+  { id: 'delayed_grat', name: '만족 지연', icon: '⏳', rarity: 'common', cost: 4,
+    desc: '버리기를 안 썼으면 라운드 종료 시 남은 버리기당 $2',
+    onRoundEnd() { if (state.discardsUsedThisRound === 0 && state.discardsLeft > 0) { const g = 2 * state.discardsLeft; state.gold += g; return `만족 지연 +$${g}`; } } },
+  { id: 'gros_michel', name: '그로 미셸', icon: '🍌', rarity: 'common', cost: 5,
+    desc: '배수 +15, 라운드 종료 시 1/6 확률로 파괴',
+    apply(ctx) { ctx.mult += 15; return '배수 +15'; },
+    onRoundEnd() { if (chance(6)) { destroyJoker(this); return '그로 미셸이 사라졌다!'; } } },
+  { id: 'even_steven', name: '짝수 스티븐', icon: '➗', rarity: 'common', cost: 4,
+    desc: '낸 짝수(2,4,6,8,10) 1장당 배수 +4',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.value <= 10 && c.value % 2 === 0).length; if (n) { ctx.mult += 4 * n; return `배수 +${4 * n}`; } } },
+  { id: 'odd_todd', name: '홀수 토드', icon: '🧮', rarity: 'common', cost: 4,
+    desc: '낸 홀수(A,3,5,7,9) 1장당 칩 +31',
+    apply(ctx) { const odd = new Set([14, 3, 5, 7, 9]); const n = scoring(ctx.cards).filter(c => odd.has(c.value)).length; if (n) { ctx.chips += 31 * n; return `칩 +${31 * n}`; } } },
+  { id: 'scholar', name: '학자', icon: '🎓', rarity: 'common', cost: 4,
+    desc: '낸 A 1장당 칩 +20, 배수 +4',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.rank === 'A').length; if (n) { ctx.chips += 20 * n; ctx.mult += 4 * n; return `칩 +${20 * n} 배수 +${4 * n}`; } } },
+  { id: 'business', name: '명함', icon: '📇', rarity: 'common', cost: 4,
+    desc: '낸 그림 카드 1장당 1/2 확률로 $2',
+    apply(ctx) { let g = 0; scoring(ctx.cards).filter(isFaceCard).forEach(() => { if (chance(2)) g += 2; }); if (g) { state.gold += g; return `+$${g}`; } } },
+  { id: 'supernova', name: '초신성', icon: '💥', rarity: 'common', cost: 5,
+    desc: '이번 런에서 이 족보를 낸 횟수만큼 배수 +',
+    apply(ctx) { const n = state.handTypeCounts[ctx.hand.type.levelKey] || 1; ctx.mult += n; return `배수 +${n}`; } },
+  { id: 'ride_the_bus', name: '버스 탑승', icon: '🚌', rarity: 'common', cost: 6, vars: { m: 0 },
+    desc(j) { return `그림 카드 없는 패 연속 1회당 배수 +1 (현재 +${j.vars ? j.vars.m : 0})`; },
+    apply(ctx) { if (this.vars.m) { ctx.mult += this.vars.m; return `배수 +${this.vars.m}`; } },
+    afterPlay(result, played) { if (played.some(isFaceCard)) this.vars.m = 0; else this.vars.m++; } },
+  { id: 'egg', name: '달걀', icon: '🥚', rarity: 'common', cost: 4,
+    desc(j) { return `라운드 종료 시 판매 가격 +$3${j.sellValue ? ` (현재 $${j.sellValue})` : ''}`; },
+    onRoundEnd() { this.sellValue += 3; } },
+  { id: 'runner', name: '러너', icon: '🏃', rarity: 'common', cost: 5, vars: { c: 0 },
+    desc(j) { return `스트레이트 포함 시 칩 + (낼 때마다 +15 성장, 현재 +${j.vars ? j.vars.c : 0})`; },
+    apply(ctx) { if (ctx.hand.hasStraight) { ctx.chips += this.vars.c; this.vars.c += 15; return `칩 +${this.vars.c - 15}`; } } },
+  { id: 'ice_cream', name: '아이스크림', icon: '🍦', rarity: 'common', cost: 5, vars: { c: 100 },
+    desc(j) { return `칩 +${j.vars ? j.vars.c : 100}, 패 낼 때마다 -5 (0이면 녹음)`; },
+    apply(ctx) { ctx.chips += this.vars.c; return `칩 +${this.vars.c}`; },
+    afterPlay() { this.vars.c -= 5; if (this.vars.c <= 0) destroyJoker(this); } },
+  { id: 'blue', name: '파란 조커', icon: '🔵', rarity: 'common', cost: 5,
+    desc: '덱에 남은 카드 1장당 칩 +2',
+    apply(ctx) { const n = state.deck.length; if (n) { ctx.chips += 2 * n; return `칩 +${2 * n}`; } } },
+  { id: 'green', name: '초록 조커', icon: '🟢', rarity: 'common', cost: 4, vars: { m: 0 },
+    desc(j) { return `패 내기마다 배수 +1, 버리기마다 -1 (현재 +${j.vars ? j.vars.m : 0})`; },
+    apply(ctx) { if (this.vars.m) { ctx.mult += this.vars.m; return `배수 +${this.vars.m}`; } },
+    afterPlay() { this.vars.m++; },
+    onDiscard() { this.vars.m = Math.max(0, this.vars.m - 1); } },
+  { id: 'todo', name: '할 일 목록', icon: '📋', rarity: 'common', cost: 4, vars: { key: 'PAIR' },
+    desc(j) { const k = j.vars && j.vars.key; return `${k ? HAND_TYPES[k].name : '지정 족보'}를 내면 $4 (라운드마다 변경)`; },
+    onRoundStart() { this.vars.key = BASIC_HAND_KEYS[Math.floor(Math.random() * BASIC_HAND_KEYS.length)]; },
+    apply(ctx) { if (ctx.hand.type.levelKey === this.vars.key) { state.gold += 4; return '+$4'; } } },
+  { id: 'cavendish', name: '캐번디시', icon: '🍌', rarity: 'common', cost: 4,
+    desc: '배수 ×3, 라운드 종료 시 1/1000 확률로 파괴',
+    apply(ctx) { ctx.mult *= 3; return '배수 ×3'; },
+    onRoundEnd() { if (chance(1000)) { destroyJoker(this); return '캐번디시가 사라졌다!'; } } },
+  { id: 'square', name: '네모 조커', icon: '🟪', rarity: 'common', cost: 4, vars: { c: 0 },
+    desc(j) { return `정확히 4장 낼 때 칩 + (낼 때마다 +4 성장, 현재 +${j.vars ? j.vars.c : 0})`; },
+    apply(ctx) { if (ctx.cards.length === 4) { ctx.chips += this.vars.c; this.vars.c += 4; return `칩 +${this.vars.c - 4}`; } } },
+  { id: 'riff_raff', name: '어중이떠중이', icon: '👥', rarity: 'common', cost: 6,
+    desc: '라운드 시작 시 일반 조커 2개 생성 (슬롯 여유 시)',
+    onRoundStart() {
+      for (let i = 0; i < 2 && state.jokers.length < MAX_JOKERS; i++) {
+        const owned = new Set(state.jokers.map(j => j.id));
+        const pool = JOKERS.filter(j => j.rarity === 'common' && !owned.has(j.id));
+        if (pool.length) state.jokers.push(makeJoker(pool[Math.floor(Math.random() * pool.length)]));
+      }
+    } },
+  { id: 'photograph', name: '사진', icon: '📸', rarity: 'common', cost: 5,
+    desc: '처음 내는 그림 카드 배수 ×2',
+    apply(ctx) { if (scoring(ctx.cards).some(isFaceCard)) { ctx.mult *= 2; return '배수 ×2'; } } },
+  { id: 'mail_rebate', name: '우편 환급', icon: '📬', rarity: 'common', cost: 4, vars: { rank: 'A' },
+    desc(j) { return `${j.vars ? j.vars.rank : '지정 랭크'}를 버릴 때마다 $5 (라운드마다 변경)`; },
+    onRoundStart() { this.vars.rank = randRank(); },
+    onDiscard(cards) { const n = cards.filter(c => c.rank === this.vars.rank).length; if (n) state.gold += 5 * n; } },
+  { id: 'faceless', name: '얼굴 없는 조커', icon: '🫥', rarity: 'common', cost: 4,
+    desc: '그림 카드를 한 번에 3장 이상 버리면 $5',
+    onDiscard(cards) { if (cards.filter(isFaceCard).length >= 3) state.gold += 5; } },
+  { id: 'juggler', name: '저글러', icon: '🤹', rarity: 'common', cost: 4, handSizeMod: 1,
+    desc: '손패 크기 +1장' },
+  { id: 'drunkard', name: '술고래', icon: '🍺', rarity: 'common', cost: 4, discardsMod: 1,
+    desc: '버리기 +1회' },
+  { id: 'golden', name: '황금 조커', icon: '🌟', rarity: 'common', cost: 6,
+    desc: '라운드 종료 시 $4',
+    onRoundEnd() { state.gold += 4; return '황금 조커 +$4'; } },
+  { id: 'popcorn', name: '팝콘', icon: '🍿', rarity: 'common', cost: 5, vars: { m: 20 },
+    desc(j) { return `배수 +${j.vars ? j.vars.m : 20}, 라운드마다 -4`; },
+    apply(ctx) { ctx.mult += this.vars.m; return `배수 +${this.vars.m}`; },
+    onRoundEnd() { this.vars.m -= 4; if (this.vars.m <= 0) { destroyJoker(this); return '팝콘을 다 먹었다!'; } } },
+  { id: 'walkie', name: '워키토키', icon: '📻', rarity: 'common', cost: 4,
+    desc: '낸 10·4 1장당 칩 +10, 배수 +4',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.value === 10 || c.value === 4).length; if (n) { ctx.chips += 10 * n; ctx.mult += 4 * n; return `칩 +${10 * n} 배수 +${4 * n}`; } } },
+  { id: 'smiley', name: '스마일 얼굴', icon: '😊', rarity: 'common', cost: 4,
+    desc: '낸 그림 카드 1장당 배수 +5',
+    apply(ctx) { const n = scoring(ctx.cards).filter(isFaceCard).length; if (n) { ctx.mult += 5 * n; return `배수 +${5 * n}`; } } },
+  { id: 'swashbuckler', name: '허세꾼', icon: '⚔️', rarity: 'common', cost: 4,
+    desc: '다른 조커들의 판매가 합만큼 배수 +',
+    apply(ctx) { const n = state.jokers.filter(j => j !== this).reduce((s, j) => s + (j.sellValue || 0), 0); if (n) { ctx.mult += n; return `배수 +${n}`; } } },
+  { id: 'shoot_moon', name: '문샷', icon: '🌙', rarity: 'common', cost: 5,
+    desc: '손에 남은 Q 1장당 배수 +13',
+    apply(ctx) { const n = state.hand.filter(c => c.rank === 'Q').length; if (n) { ctx.mult += 13 * n; return `배수 +${13 * n}`; } } },
+
+  /* ===== 희귀 (Uncommon) ===== */
+  { id: 'stencil', name: '조커 스텐실', icon: '🖼️', rarity: 'uncommon', cost: 8,
+    desc: '빈 조커 슬롯 1개당 배수 ×1 (자신 포함)',
+    apply(ctx) { const n = Math.max(1, MAX_JOKERS - state.jokers.length + 1); if (n > 1) { ctx.mult *= n; return `배수 ×${n}`; } } },
+  { id: 'four_fingers', name: '네 손가락', icon: '🖐️', rarity: 'uncommon', cost: 7,
+    desc: '4장으로도 플러시/스트레이트 인정' },
+  { id: 'loyalty_card', name: '충성 카드', icon: '🎫', rarity: 'uncommon', cost: 5, vars: { left: 5 },
+    desc(j) { return `6번째 패마다 배수 ×4 (남은 패: ${j.vars ? j.vars.left : 5})`; },
+    apply(ctx) { if (this.vars.left <= 0) { ctx.mult *= 4; this.vars.left = 5; return '배수 ×4!'; } this.vars.left--; } },
+  { id: 'dusk', name: '황혼', icon: '🌆', rarity: 'uncommon', cost: 5,
+    desc: '라운드 마지막 패: 카드 칩 2배 적용',
+    apply(ctx) { if (state.handsLeft === 0) { ctx.chips += ctx.cardChips; return `칩 +${ctx.cardChips}`; } } },
+  { id: 'fibonacci', name: '피보나치', icon: '🔢', rarity: 'uncommon', cost: 8,
+    desc: '낸 A,2,3,5,8 1장당 배수 +8',
+    apply(ctx) { const fib = new Set([14, 2, 3, 5, 8]); const n = scoring(ctx.cards).filter(c => fib.has(c.value)).length; if (n) { ctx.mult += 8 * n; return `배수 +${8 * n}`; } } },
+  { id: 'hack', name: '해킹', icon: '💻', rarity: 'uncommon', cost: 6,
+    desc: '낸 2,3,4,5의 칩 2배 적용',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.value >= 2 && c.value <= 5).reduce((s, c) => s + c.chips, 0); if (n) { ctx.chips += n; return `칩 +${n}`; } } },
+  { id: 'pareidolia', name: '변상증', icon: '🎭', rarity: 'uncommon', cost: 5,
+    desc: '모든 카드를 그림 카드로 취급' },
+  { id: 'space', name: '우주 조커', icon: '🚀', rarity: 'uncommon', cost: 5,
+    desc: '1/4 확률로 낸 족보 레벨 +1',
+    afterPlay(result) { if (chance(4)) { levelUpHand(result.hand.type.levelKey); } } },
+  { id: 'burglar', name: '도둑', icon: '🦹', rarity: 'uncommon', cost: 6,
+    desc: '라운드 시작 시 패 내기 +3, 버리기 0회',
+    onRoundStart() { state.handsLeft += 3; state.discardsLeft = 0; } },
+  { id: 'blackboard', name: '칠판', icon: '🖤', rarity: 'uncommon', cost: 6,
+    desc: '손에 남은 카드가 모두 ♠/♣면 배수 ×3',
+    apply(ctx) { if (state.hand.every(c => c.suit === 'spade' || c.suit === 'club')) { ctx.mult *= 3; return '배수 ×3'; } } },
+  { id: 'constellation', name: '별자리', icon: '✨', rarity: 'uncommon', cost: 6,
+    desc: '사용한 행성 카드 1개당 배수 ×0.1 추가',
+    apply(ctx) { const n = state.planetsUsed; if (n) { const x = 1 + 0.1 * n; ctx.mult *= x; return `배수 ×${x.toFixed(1)}`; } } },
+  { id: 'card_sharp', name: '카드 상어', icon: '🦈', rarity: 'uncommon', cost: 6,
+    desc: '이번 라운드에 이미 낸 족보면 배수 ×3',
+    apply(ctx) { if (state.roundHandTypes.includes(ctx.hand.type.levelKey)) { ctx.mult *= 3; return '배수 ×3'; } } },
+  { id: 'madness', name: '광기', icon: '😵', rarity: 'uncommon', cost: 7, vars: { x: 1 },
+    desc(j) { return `스몰/빅 시작 시 배수 ×0.5 성장 + 무작위 조커 파괴 (현재 ×${j.vars ? j.vars.x.toFixed(1) : '1.0'})`; },
+    onRoundStart() {
+      if (state.blindIdx < 2) {
+        this.vars.x += 0.5;
+        const others = state.jokers.filter(j => j !== this);
+        if (others.length) destroyJoker(others[Math.floor(Math.random() * others.length)]);
+      }
+    },
+    apply(ctx) { if (this.vars.x > 1) { ctx.mult *= this.vars.x; return `배수 ×${this.vars.x.toFixed(1)}`; } } },
+  { id: 'shortcut', name: '지름길', icon: '⤴️', rarity: 'uncommon', cost: 7,
+    desc: '1칸 건너뛴 스트레이트 인정 (예: 2,4,6,8,10)' },
+  { id: 'cloud9', name: '구름 9', icon: '☁️', rarity: 'uncommon', cost: 7,
+    desc: '라운드 종료 시 덱의 9 1장당 $1 ($4)',
+    onRoundEnd() { state.gold += 4; return '구름 9 +$4'; } },
+  { id: 'rocket', name: '로켓', icon: '🧨', rarity: 'uncommon', cost: 6, vars: { amt: 1 },
+    desc(j) { return `라운드 종료 시 $${j.vars ? j.vars.amt : 1}, 보스 격파 시 +$2 성장`; },
+    onRoundEnd() { state.gold += this.vars.amt; return `로켓 +$${this.vars.amt}`; },
+    onBossDefeat() { this.vars.amt += 2; } },
+  { id: 'reserved_parking', name: '지정 주차', icon: '🅿️', rarity: 'uncommon', cost: 6,
+    desc: '손에 남은 그림 카드 1장당 1/2 확률로 $1',
+    apply(ctx) { let g = 0; state.hand.filter(isFaceCard).forEach(() => { if (chance(2)) g++; }); if (g) { state.gold += g; return `+$${g}`; } } },
+  { id: 'to_the_moon', name: '달까지', icon: '🌝', rarity: 'uncommon', cost: 5,
+    desc: '이자 2배 ($5당 $1 추가, 최대 +$5)' },
+  { id: 'baseball', name: '야구 카드', icon: '⚾', rarity: 'uncommon', cost: 8,
+    desc: '다른 희귀 조커 1개당 배수 ×1.5',
+    apply(ctx) { const n = state.jokers.filter(j => j !== this && j.rarity === 'uncommon').length; if (n) { const x = Math.pow(1.5, n); ctx.mult *= x; return `배수 ×${x.toFixed(2)}`; } } },
+  { id: 'bull', name: '황소', icon: '🐂', rarity: 'uncommon', cost: 6,
+    desc: '보유 $1당 칩 +2',
+    apply(ctx) { const n = 2 * Math.max(0, state.gold); if (n) { ctx.chips += n; return `칩 +${n}`; } } },
+  { id: 'trading', name: '트레이딩 카드', icon: '🎴', rarity: 'uncommon', cost: 6,
+    desc: '라운드 첫 버리기가 1장이면 $3',
+    onDiscard(cards) { if (!state.firstDiscardDone && cards.length === 1) state.gold += 3; } },
+  { id: 'flash', name: '플래시 카드', icon: '⚡', rarity: 'uncommon', cost: 5,
+    desc: '상점 새로고침 1회당 배수 +2',
+    apply(ctx) { const n = 2 * state.rerolls; if (n) { ctx.mult += n; return `배수 +${n}`; } } },
+  { id: 'trousers', name: '여분 바지', icon: '👖', rarity: 'uncommon', cost: 6, vars: { m: 0 },
+    desc(j) { return `투 페어 포함 시 배수 + (낼 때마다 +2 성장, 현재 +${j.vars ? j.vars.m : 0})`; },
+    apply(ctx) { if (ctx.hand.hasTwoPair) { ctx.mult += this.vars.m; this.vars.m += 2; return `배수 +${this.vars.m - 2}`; } } },
+  { id: 'ramen', name: '라면', icon: '🍜', rarity: 'uncommon', cost: 6, vars: { x: 2 },
+    desc(j) { return `배수 ×${j.vars ? j.vars.x.toFixed(2) : '2.00'}, 버린 카드 1장당 -0.01 (×1이면 파괴)`; },
+    apply(ctx) { ctx.mult *= this.vars.x; return `배수 ×${this.vars.x.toFixed(2)}`; },
+    onDiscard(cards) { this.vars.x = Math.max(1, this.vars.x - 0.01 * cards.length); if (this.vars.x <= 1) destroyJoker(this); } },
+  { id: 'seltzer', name: '탄산수', icon: '🥤', rarity: 'uncommon', cost: 6, vars: { left: 10 },
+    desc(j) { return `카드 칩 2배 적용 (남은 패: ${j.vars ? j.vars.left : 10})`; },
+    apply(ctx) { ctx.chips += ctx.cardChips; return `칩 +${ctx.cardChips}`; },
+    afterPlay() { this.vars.left--; if (this.vars.left <= 0) destroyJoker(this); } },
+  { id: 'castle', name: '성', icon: '🏰', rarity: 'uncommon', cost: 6, vars: { suit: 'spade', c: 0 },
+    desc(j) { const v = j.vars || {}; return `${SUIT_SYM[v.suit] || '?'} 버릴 때마다 칩 +3 성장 (현재 +${v.c || 0}, 라운드마다 무늬 변경)`; },
+    onRoundStart() { this.vars.suit = randSuit(); },
+    onDiscard(cards) { this.vars.c += 3 * cards.filter(c => c.suit === this.vars.suit).length; },
+    apply(ctx) { if (this.vars.c) { ctx.chips += this.vars.c; return `칩 +${this.vars.c}`; } } },
+  { id: 'mr_bones', name: '미스터 본즈', icon: '☠️', rarity: 'uncommon', cost: 5,
+    desc: '목표의 25% 이상 득점 시 게임오버 방지 (자신 파괴)' },
+  { id: 'acrobat', name: '곡예사', icon: '🤸', rarity: 'uncommon', cost: 6,
+    desc: '라운드 마지막 패에서 배수 ×3',
+    apply(ctx) { if (state.handsLeft === 0) { ctx.mult *= 3; return '배수 ×3'; } } },
+  { id: 'sock_buskin', name: '양말과 반장화', icon: '🎭', rarity: 'uncommon', cost: 6,
+    desc: '낸 그림 카드의 칩 2배 적용',
+    apply(ctx) { const n = scoring(ctx.cards).filter(isFaceCard).reduce((s, c) => s + c.chips, 0); if (n) { ctx.chips += n; return `칩 +${n}`; } } },
+  { id: 'troubadour', name: '음유시인', icon: '🎻', rarity: 'uncommon', cost: 6, handSizeMod: 2, handsMod: -1,
+    desc: '손패 +2장, 패 내기 -1회' },
+  { id: 'smeared', name: '번진 조커', icon: '🖌️', rarity: 'uncommon', cost: 7,
+    desc: '♥♦ / ♠♣를 같은 무늬로 취급 (플러시)' },
+  { id: 'rough_gem', name: '원석', icon: '💠', rarity: 'uncommon', cost: 7,
+    desc: '낸 ♦ 1장당 $1',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'diamond').length; if (n) { state.gold += n; return `+$${n}`; } } },
+  { id: 'bloodstone', name: '혈석', icon: '🩸', rarity: 'uncommon', cost: 7,
+    desc: '낸 ♥ 1장당 1/2 확률로 배수 ×1.5',
+    apply(ctx) { let k = 0; scoring(ctx.cards).filter(c => c.suit === 'heart').forEach(() => { if (chance(2)) k++; }); if (k) { const x = Math.pow(1.5, k); ctx.mult *= x; return `배수 ×${x.toFixed(2)}`; } } },
+  { id: 'arrowhead', name: '화살촉', icon: '🏹', rarity: 'uncommon', cost: 7,
+    desc: '낸 ♠ 1장당 칩 +50',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'spade').length; if (n) { ctx.chips += 50 * n; return `칩 +${50 * n}`; } } },
+  { id: 'onyx', name: '흑마노', icon: '⚫', rarity: 'uncommon', cost: 7,
+    desc: '낸 ♣ 1장당 배수 +7',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === 'club').length; if (n) { ctx.mult += 7 * n; return `배수 +${7 * n}`; } } },
+  { id: 'flower_pot', name: '화분', icon: '🪴', rarity: 'uncommon', cost: 6,
+    desc: '4가지 무늬를 모두 내면 배수 ×3',
+    apply(ctx) { if (new Set(scoring(ctx.cards).map(c => c.suit)).size === 4) { ctx.mult *= 3; return '배수 ×3'; } } },
+  { id: 'merry_andy', name: '명랑한 앤디', icon: '🎉', rarity: 'uncommon', cost: 7, discardsMod: 3, handSizeMod: -1,
+    desc: '버리기 +3회, 손패 -1장' },
+  { id: 'oops', name: '이런! 모두 6이야', icon: '🎲', rarity: 'uncommon', cost: 4,
+    desc: '모든 확률 2배 (1/4 → 1/2)' },
+  { id: 'idol', name: '우상', icon: '🗿', rarity: 'uncommon', cost: 6, vars: { rank: 'A', suit: 'spade' },
+    desc(j) { const v = j.vars || {}; return `${v.rank || '?'}${SUIT_SYM[v.suit] || ''} 1장당 배수 ×2 (라운드마다 변경)`; },
+    onRoundStart() { this.vars.rank = randRank(); this.vars.suit = randSuit(); },
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.rank === this.vars.rank && c.suit === this.vars.suit).length; if (n) { const x = Math.pow(2, n); ctx.mult *= x; return `배수 ×${x}`; } } },
+  { id: 'seeing_double', name: '더블로 보기', icon: '👓', rarity: 'uncommon', cost: 6,
+    desc: '♣과 다른 무늬를 함께 내면 배수 ×2',
+    apply(ctx) { const suits = new Set(scoring(ctx.cards).map(c => c.suit)); if (suits.has('club') && suits.size >= 2) { ctx.mult *= 2; return '배수 ×2'; } } },
+  { id: 'satellite', name: '위성', icon: '🛰️', rarity: 'uncommon', cost: 6,
+    desc: '라운드 종료 시 사용한 행성 종류당 $1',
+    onRoundEnd() { const g = state.planetsUniq.size; if (g) { state.gold += g; return `위성 +$${g}`; } } },
+  { id: 'astronomer', name: '천문학자', icon: '🔭', rarity: 'uncommon', cost: 8,
+    desc: '상점의 행성 카드가 무료' },
+  { id: 'bootstraps', name: '부트스트랩', icon: '🥾', rarity: 'uncommon', cost: 7,
+    desc: '보유 $5당 배수 +2',
+    apply(ctx) { const n = 2 * Math.floor(Math.max(0, state.gold) / 5); if (n) { ctx.mult += n; return `배수 +${n}`; } } },
+
+  /* ===== 레어 (Rare) ===== */
+  { id: 'baron', name: '남작', icon: '👑', rarity: 'rare', cost: 8,
+    desc: '손에 남은 K 1장당 배수 ×1.5',
+    apply(ctx) { const n = state.hand.filter(c => c.rank === 'K').length; if (n) { const x = Math.pow(1.5, n); ctx.mult *= x; return `배수 ×${x.toFixed(2)}`; } } },
+  { id: 'ancient', name: '고대 조커', icon: '🏺', rarity: 'rare', cost: 8, vars: { suit: 'spade' },
+    desc(j) { const v = j.vars || {}; return `낸 ${SUIT_SYM[v.suit] || '?'} 1장당 배수 ×1.5 (라운드마다 변경)`; },
+    onRoundStart() { this.vars.suit = randSuit(); },
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.suit === this.vars.suit).length; if (n) { const x = Math.pow(1.5, n); ctx.mult *= x; return `배수 ×${x.toFixed(2)}`; } } },
+  { id: 'campfire', name: '모닥불', icon: '🔥', rarity: 'rare', cost: 9, vars: { x: 1 },
+    desc(j) { return `카드 판매마다 배수 ×0.25 성장, 보스 격파 시 리셋 (현재 ×${j.vars ? j.vars.x.toFixed(2) : '1.00'})`; },
+    onSell() { this.vars.x += 0.25; },
+    onBossDefeat() { this.vars.x = 1; },
+    apply(ctx) { if (this.vars.x > 1) { ctx.mult *= this.vars.x; return `배수 ×${this.vars.x.toFixed(2)}`; } } },
+  { id: 'blueprint', name: '청사진', icon: '📐', rarity: 'rare', cost: 10,
+    desc: '오른쪽 조커의 점수 효과 복사',
+    apply(ctx) {
+      const i = state.jokers.indexOf(this);
+      const t = state.jokers[i + 1];
+      if (t && t.apply && t.id !== 'blueprint' && t.id !== 'brainstorm') { const r = t.apply.call(t, ctx); if (r) return `복사: ${r}`; }
+    } },
+  { id: 'brainstorm', name: '브레인스톰', icon: '🧩', rarity: 'rare', cost: 10,
+    desc: '맨 왼쪽 조커의 점수 효과 복사',
+    apply(ctx) {
+      const t = state.jokers[0];
+      if (t && t !== this && t.apply && t.id !== 'blueprint' && t.id !== 'brainstorm') { const r = t.apply.call(t, ctx); if (r) return `복사: ${r}`; }
+    } },
+  { id: 'wee', name: '위 조커', icon: '🤏', rarity: 'rare', cost: 8, vars: { c: 8 },
+    desc(j) { return `칩 +${j.vars ? j.vars.c : 8}, 2를 낼 때마다 +8 성장`; },
+    apply(ctx) { ctx.chips += this.vars.c; const n = scoring(ctx.cards).filter(c => c.value === 2).length; const give = this.vars.c; if (n) this.vars.c += 8 * n; return `칩 +${give}`; } },
+  { id: 'hit_the_road', name: '길 떠나기', icon: '🛣️', rarity: 'rare', cost: 8,
+    desc: '이번 라운드에 버린 J 1장당 배수 ×0.5 추가',
+    apply(ctx) { const n = state.discardedJacksThisRound; if (n) { const x = 1 + 0.5 * n; ctx.mult *= x; return `배수 ×${x.toFixed(1)}`; } } },
+  { id: 'duo', name: '듀오', icon: '👯', rarity: 'rare', cost: 8,
+    desc: '페어 포함 시 배수 ×2',
+    apply(ctx) { if (ctx.hand.hasPair) { ctx.mult *= 2; return '배수 ×2'; } } },
+  { id: 'trio', name: '트리오', icon: '🎺', rarity: 'rare', cost: 8,
+    desc: '트리플 포함 시 배수 ×3',
+    apply(ctx) { if (ctx.hand.hasTrips) { ctx.mult *= 3; return '배수 ×3'; } } },
+  { id: 'family', name: '패밀리', icon: '👨‍👩‍👧‍👦', rarity: 'rare', cost: 8,
+    desc: '포카드 포함 시 배수 ×4',
+    apply(ctx) { if (ctx.hand.hasFour) { ctx.mult *= 4; return '배수 ×4'; } } },
+  { id: 'order', name: '오더', icon: '📜', rarity: 'rare', cost: 8,
+    desc: '스트레이트 포함 시 배수 ×3',
+    apply(ctx) { if (ctx.hand.hasStraight) { ctx.mult *= 3; return '배수 ×3'; } } },
+  { id: 'tribe', name: '트라이브', icon: '🏕️', rarity: 'rare', cost: 8,
+    desc: '플러시 포함 시 배수 ×2',
+    apply(ctx) { if (ctx.hand.hasFlush) { ctx.mult *= 2; return '배수 ×2'; } } },
+  { id: 'stuntman', name: '스턴트맨', icon: '🪂', rarity: 'rare', cost: 7, handSizeMod: -2,
+    desc: '칩 +250, 손패 -2장',
+    apply(ctx) { ctx.chips += 250; return '칩 +250'; } },
+  { id: 'burnt', name: '그을린 조커', icon: '🕯️', rarity: 'rare', cost: 8,
+    desc: '라운드 첫 버리기의 족보 레벨 +1',
+    onDiscard(cards) { if (!state.firstDiscardDone) { const h = evaluateHand(cards); if (h) levelUpHand(h.type.levelKey); } } },
+
+  /* ===== 전설 (Legendary) ===== */
+  { id: 'triboulet', name: '트리불레', icon: '🎪', rarity: 'legendary', cost: 20,
+    desc: '낸 K·Q 1장당 배수 ×2',
+    apply(ctx) { const n = scoring(ctx.cards).filter(c => c.rank === 'K' || c.rank === 'Q').length; if (n) { const x = Math.pow(2, n); ctx.mult *= x; return `배수 ×${x}`; } } },
+  { id: 'yorick', name: '요릭', icon: '💀', rarity: 'legendary', cost: 20, vars: { x: 1, n: 0 },
+    desc(j) { const v = j.vars || {}; return `배수 ×${(v.x || 1).toFixed(0)}, 카드 23장 버릴 때마다 ×1 성장 (${v.n || 0}/23)`; },
+    onDiscard(cards) { this.vars.n += cards.length; while (this.vars.n >= 23) { this.vars.x += 1; this.vars.n -= 23; } },
+    apply(ctx) { if (this.vars.x > 1) { ctx.mult *= this.vars.x; return `배수 ×${this.vars.x}`; } } },
+];
+
+// 앤티별 기본 점수 (발라트로 원작 수치, 앤티 8 클리어 = 승리, 이후 무한 모드)
+const ANTE_BASE = [300, 800, 2000, 5000, 11000, 20000, 35000, 50000,
+                   110000, 560000, 7200000, 300000000, 47000000000,
+                   2.9e13, 7.7e16, 8.6e20];
+const WIN_ANTE = 8;
+function blindTarget(ante, blindIdx) {
+  const base = ante <= ANTE_BASE.length
+    ? ANTE_BASE[ante - 1]
+    : ANTE_BASE[ANTE_BASE.length - 1] * Math.pow(10, ante - ANTE_BASE.length);
+  let mult = [1, 1.5, 2][blindIdx];
+  if (blindIdx === 2 && state && state.boss && state.boss.targetMult) mult *= state.boss.targetMult;
+  return Math.round(base * mult);
+}
+const BLIND_NAMES = ['스몰 블라인드', '빅 블라인드', '보스 블라인드'];
+const BLIND_CLASSES = ['blind-small', 'blind-big', 'blind-boss'];
+const BLIND_ICONS = ['🎯', '🔶', '👹'];
+const BLIND_REWARDS = [3, 4, 5]; // 블라인드별 기본 골드 보상
+
+// 보스 블라인드 페널티 — 보스 라운드마다 무작위 1개 (전부 나오기 전엔 중복 없음)
+const BOSS_BLINDS = [
+  { id: 'wall',    name: '벽',       icon: '🧱', desc: '요구 점수가 2배로 늘어납니다', targetMult: 2 },
+  { id: 'water',   name: '물',       icon: '💧', desc: '버리기 0회로 시작합니다', noDiscards: true },
+  { id: 'needle',  name: '바늘',     icon: '📍', desc: '패를 단 1번만 낼 수 있습니다 (요구 점수 절반)', oneHand: true, targetMult: 0.5 },
+  { id: 'psychic', name: '심령술사', icon: '🔮', desc: '반드시 카드 5장을 내야 합니다', forceFive: true },
+  { id: 'flint',   name: '부싯돌',   icon: '🔥', desc: '족보의 기본 칩과 배수가 절반이 됩니다', halve: true },
+  { id: 'manacle', name: '수갑',     icon: '⛓️', desc: '손패 크기 -1장', handSizeDown: 1 },
+  { id: 'goad',    name: '자극',     icon: '♠️', desc: '모든 스페이드 카드가 디버프됩니다 (칩 0)', debuffSuit: 'spade' },
+  { id: 'head',    name: '머리',     icon: '💀', desc: '모든 하트 카드가 디버프됩니다 (칩 0)', debuffSuit: 'heart' },
+  { id: 'window',  name: '창문',     icon: '🪟', desc: '모든 다이아몬드 카드가 디버프됩니다 (칩 0)', debuffSuit: 'diamond' },
+  { id: 'club',    name: '클럽',     icon: '♣️', desc: '모든 클럽 카드가 디버프됩니다 (칩 0)', debuffSuit: 'club' },
+];
+
+function isDebuffed(card) {
+  return !!(state && state.boss && state.boss.debuffSuit === card.suit);
+}
+
+/* ============================================================
+   deck — 덱 생성, 셔플, 뽑기 (Milestone 1)
+   ============================================================ */
+function createDeck() {
+  const deck = [];
+  for (const s of SUITS) {
+    for (const r of RANKS) {
+      deck.push({ suit: s.key, sym: s.sym, rank: r.rank, value: r.value, chips: r.chips });
+    }
+  }
+  return deck;
+}
+
+// Fisher-Yates 셔플
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function drawCards(n) {
+  const drawn = state.deck.splice(0, Math.min(n, state.deck.length));
+  state.hand.push(...drawn);
+  return drawn;
+}
+
+/* ============================================================
+   handEvaluator — 포커 패 판정 엔진 (Milestone 2)
+   ============================================================ */
+function evaluateHand(cards) {
+  if (cards.length === 0) return null;
+
+  const counts = {}; // value별 장수
+  for (const c of cards) counts[c.value] = (counts[c.value] || 0) + 1;
+  const countVals = Object.values(counts).sort((a, b) => b - a);
+
+  // '네 손가락' 조커: 4장으로도 플러시/스트레이트 인정
+  const minLen = hasJoker('four_fingers') ? 4 : 5;
+
+  // 플러시 — '번진 조커': 같은 색(♥♦/♠♣)을 같은 무늬로 취급
+  const suitKey = c => hasJoker('smeared')
+    ? (c.suit === 'heart' || c.suit === 'diamond' ? 'red' : 'black')
+    : c.suit;
+  const suitCounts = {};
+  for (const c of cards) suitCounts[suitKey(c)] = (suitCounts[suitKey(c)] || 0) + 1;
+  const isFlush = cards.length >= minLen && Math.max(...Object.values(suitCounts)) >= minLen;
+
+  // 스트레이트 — '지름길' 조커: 1칸 건너뛰기 허용 (A-2-3-4-5 백스트레이트 포함)
+  const gap = hasJoker('shortcut') ? 2 : 1;
+  let vals = [...new Set(cards.map(c => c.value))].sort((a, b) => a - b);
+  if (vals.includes(14)) vals = [1, ...vals]; // A는 1로도 사용 가능
+  let isStraight = false, straightHigh = 0, run = 1;
+  for (let i = 1; i < vals.length; i++) {
+    run = (vals[i] - vals[i - 1] <= gap) ? run + 1 : 1;
+    if (run >= minLen) { isStraight = true; straightHigh = vals[i]; }
+  }
+  // 일반 판정: 낸 카드 전체가 스트레이트를 구성해야 함 (네 손가락이면 일부만으로도 가능)
+  if (isStraight && minLen === 5 && (cards.length !== 5 || countVals[0] > 1)) isStraight = false;
+  const isRoyal = isStraight && straightHigh === 14 && cards.every(c => c.value >= 10);
+
+  let type;
+  if (isStraight && isFlush) type = isRoyal ? HAND_TYPES.ROYAL_FLUSH : HAND_TYPES.STRAIGHT_FLUSH;
+  else if (countVals[0] === 4) type = HAND_TYPES.FOUR_KIND;
+  else if (countVals[0] === 3 && countVals[1] === 2) type = HAND_TYPES.FULL_HOUSE;
+  else if (isFlush) type = HAND_TYPES.FLUSH;
+  else if (isStraight) type = HAND_TYPES.STRAIGHT;
+  else if (countVals[0] === 3) type = HAND_TYPES.TRIPLE;
+  else if (countVals[0] === 2 && countVals[1] === 2) type = HAND_TYPES.TWO_PAIR;
+  else if (countVals[0] === 2) type = HAND_TYPES.PAIR;
+  else type = HAND_TYPES.HIGH_CARD;
+
+  // "포함" 판정 — 조커 조건용 (예: 풀하우스는 페어와 트리플을 포함)
+  return {
+    type,
+    hasPair: countVals[0] >= 2,
+    hasTrips: countVals[0] >= 3,
+    hasFour: countVals[0] >= 4,
+    hasTwoPair: countVals.filter(v => v >= 2).length >= 2 || countVals[0] >= 4,
+    hasStraight: isStraight,
+    hasFlush: isFlush,
+  };
+}
+
+/* ============================================================
+   scoring — 점수 계산 + 조커 효과 적용 (Milestone 2, 4)
+   ============================================================ */
+function scoreHand(cards) {
+  const hand = evaluateHand(cards);
+  // 족보 레벨 반영 + 보스 '부싯돌'이면 절반
+  let baseChips = handChipsOf(hand.type);
+  let baseMult = handMultOf(hand.type);
+  if (state.boss && state.boss.halve) {
+    baseChips = Math.ceil(baseChips / 2);
+    baseMult = Math.ceil(baseMult / 2);
+  }
+  // 디버프된 카드는 칩을 내지 않는다
+  const cardChips = cards.reduce((sum, c) => sum + (isDebuffed(c) ? 0 : c.chips), 0);
+
+  const ctx = {
+    hand, cards, state,
+    chips: baseChips + cardChips,
+    mult: baseMult,
+    cardChips,
+  };
+
+  // 조커를 슬롯 순서대로 적용 (재발동·복사 효과 위해 call로 this 바인딩)
+  const triggered = [];
+  state.jokers.forEach((joker, i) => {
+    if (!joker.apply) return;
+    const result = joker.apply.call(joker, ctx);
+    if (result) triggered.push({ index: i, label: result });
+  });
+
+  return {
+    hand,
+    chips: Math.round(ctx.chips),
+    mult: Math.round(ctx.mult * 100) / 100,
+    total: Math.round(ctx.chips * ctx.mult),
+    triggered,
+  };
+}
+
+/* ============================================================
+   gameState — 현재 게임 상태 (Milestone 3)
+   ============================================================ */
+let state = null;
+
+function newGame() {
+  state = {
+    ante: 1,
+    blindIdx: 0,           // 0=스몰, 1=빅, 2=보스
+    gold: 4,
+    jokers: [],
+    bestScore: 0,
+    handLevels: {},        // 족보 레벨 (행성 카드로 상승)
+    bossPool: [],          // 아직 안 나온 보스 블라인드
+    boss: null,            // 현재 보스 (보스 라운드에만)
+    endless: false,        // 앤티 8 클리어 후 무한 모드
+    // 조커용 추적 변수
+    handTypeCounts: {},    // 족보별 사용 횟수 (초신성)
+    roundHandTypes: [],    // 이번 라운드에 낸 족보 (카드 상어)
+    planetsUsed: 0,        // 사용한 행성 카드 수 (별자리)
+    planetsUniq: new Set(),// 사용한 행성 종류 (위성)
+    rerolls: 0,            // 상점 새로고침 누적 (플래시 카드)
+    rerollCost: 5,
+    freeRerollUsed: false,
+    discardsUsedThisRound: 0,
+    discardedJacksThisRound: 0,
+    firstDiscardDone: false,
+    // 라운드별 상태 (startRound에서 초기화)
+    deck: [], hand: [], selected: new Set(),
+    roundScore: 0, handsLeft: 0, discardsLeft: 0,
+    discardedCardsThisRound: 0,
+    busy: false,
+  };
+  startRound();
+  showScreen('gameScreen');
+}
+
+function pickBoss() {
+  if (state.bossPool.length === 0) state.bossPool = shuffle([...BOSS_BLINDS]);
+  return state.bossPool.pop();
+}
+
+function effectiveHandSize() {
+  return Math.max(1, HAND_SIZE + jokerSum('handSizeMod')
+    - (state.boss && state.boss.handSizeDown ? state.boss.handSizeDown : 0));
+}
+
+function startRound() {
+  state.boss = state.blindIdx === 2 ? pickBoss() : null;
+  state.deck = shuffle(createDeck());
+  state.hand = [];
+  state.selected = new Set();
+  state.roundScore = 0;
+  state.handsLeft = state.boss && state.boss.oneHand
+    ? 1 : Math.max(1, HANDS_PER_ROUND + jokerSum('handsMod'));
+  state.discardsLeft = state.boss && state.boss.noDiscards
+    ? 0 : Math.max(0, DISCARDS_PER_ROUND + jokerSum('discardsMod'));
+  state.discardedCardsThisRound = 0;
+  state.roundHandTypes = [];
+  state.discardsUsedThisRound = 0;
+  state.discardedJacksThisRound = 0;
+  state.firstDiscardDone = false;
+  state.busy = false;
+  // 라운드 시작 훅 (도둑, 광기, 어중이떠중이, 무늬/랭크 변경 조커 등)
+  state.jokers.slice().forEach(j => j.onRoundStart && j.onRoundStart());
+  drawCards(effectiveHandSize());
+  sortHand();
+  el.playedCards.innerHTML = '';
+  el.handResult.innerHTML = '';
+  renderAll(true);
+}
+
+function currentTarget() {
+  return blindTarget(state.ante, state.blindIdx);
+}
+
+/* ============================================================
+   sound — Web Audio 비프음 (Milestone 6)
+   ============================================================ */
+let audioCtx = null;
+function beep(freq, dur = 0.08, type = 'square', vol = 0.06, delay = 0) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  } catch (e) { /* 오디오 미지원 환경 무시 */ }
+}
+const sfx = {
+  select:  () => beep(520, 0.05, 'sine', 0.05),
+  deselect:() => beep(380, 0.05, 'sine', 0.04),
+  play:    () => { beep(440, 0.07); beep(660, 0.07, 'square', 0.06, 0.08); },
+  score:   () => { beep(523, 0.09, 'triangle', 0.08); beep(659, 0.09, 'triangle', 0.08, 0.1); beep(784, 0.14, 'triangle', 0.08, 0.2); },
+  discard: () => beep(220, 0.09, 'sawtooth', 0.04),
+  buy:     () => { beep(880, 0.06, 'sine', 0.07); beep(1175, 0.1, 'sine', 0.07, 0.07); },
+  clear:   () => { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.13, 'triangle', 0.08, i * 0.11)); },
+  gameover:() => { [392, 330, 262, 196].forEach((f, i) => beep(f, 0.18, 'sawtooth', 0.05, i * 0.16)); },
+};
+
+/* ============================================================
+   ui — DOM 렌더링 (Milestone 1, 3, 5, 6)
+   ============================================================ */
+const el = {};
+['startScreen', 'gameScreen', 'shopScreen', 'gameoverScreen', 'clearBanner',
+ 'victoryStats', 'endlessBtn', 'victoryNewBtn',
+ 'blindBox', 'blindBadge', 'blindName', 'blindDesc', 'progressFill', 'progressText',
+ 'anteVal', 'handsVal', 'discardsVal', 'goldVal',
+ 'jokerArea', 'playedCards', 'handResult', 'handArea', 'deckCount',
+ 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'retryBtn',
+ 'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
+ 'clearReward', 'toShopBtn', 'gameoverStats',
+].forEach(id => { el[id] = document.getElementById(id); });
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function cardEl(card, opts = {}) {
+  const div = document.createElement('div');
+  div.className = 'card suit-' + card.suit;
+  // 그림 카드는 테두리 액자 안에 인물 일러스트, 숫자 카드는 무늬 핍
+  const center = FACE_ART[card.rank]
+    ? `<div class="face-frame" data-suit="${card.sym}">${FACE_ART[card.rank]}</div>`
+    : `<div class="pip">${card.sym}</div>`;
+  div.innerHTML =
+    `<div class="corner">${card.rank}<br>${card.sym}</div>` +
+    center +
+    `<div class="corner bottom">${card.rank}<br>${card.sym}</div>`;
+  if (opts.dealt) {
+    div.classList.add('dealt');
+    div.style.animationDelay = (opts.delay || 0) + 'ms';
+  }
+  return div;
+}
+
+function renderHand(animateNew = false) {
+  el.handArea.innerHTML = '';
+  state.hand.forEach((card, i) => {
+    const div = cardEl(card, { dealt: animateNew, delay: i * 60 });
+    if (isDebuffed(card)) div.classList.add('debuffed');
+    if (state.selected.has(card)) div.classList.add('selected');
+    div.addEventListener('click', () => toggleSelect(card));
+    el.handArea.appendChild(div);
+  });
+  el.deckCount.textContent = `덱: ${state.deck.length}장`;
+}
+
+function renderTopBar() {
+  const target = currentTarget();
+  el.blindBox.className = BLIND_CLASSES[state.blindIdx];
+  el.blindBadge.textContent = state.boss ? state.boss.icon : BLIND_ICONS[state.blindIdx];
+  el.blindName.textContent = state.boss
+    ? `보스: ${state.boss.name} (앤티 ${state.ante})`
+    : `${BLIND_NAMES[state.blindIdx]} (앤티 ${state.ante})`;
+  el.blindDesc.textContent = state.boss ? state.boss.desc : '';
+  const pct = Math.min(100, (state.roundScore / target) * 100);
+  el.progressFill.style.width = pct + '%';
+  el.progressText.textContent = `${state.roundScore.toLocaleString()} / ${target.toLocaleString()}`;
+  el.anteVal.textContent = state.ante;
+  el.handsVal.textContent = state.handsLeft;
+  el.discardsVal.textContent = state.discardsLeft;
+  el.goldVal.textContent = state.gold;
+}
+
+function jokerCardEl(joker) {
+  const div = document.createElement('div');
+  div.className = 'joker-card';
+  const rar = RARITIES[joker.rarity] || { color: '#8a6cc0' };
+  div.style.setProperty('--j-border', rar.color);
+  div.style.setProperty('--j-c1', '#4a3570');
+  div.style.setProperty('--j-c2', '#2a1d45');
+  const desc = typeof joker.desc === 'function' ? joker.desc(joker) : joker.desc;
+  div.innerHTML =
+    `<div class="j-icon">${joker.icon || '🃏'}</div>` +
+    `<div class="j-text"><div class="j-name">${joker.name}</div><div class="j-desc">${desc}</div></div>`;
+  div.title = `[${rar.name || '?'}] ${joker.name}`;
+  return div;
+}
+
+function renderJokers() {
+  el.jokerArea.innerHTML = '<span class="area-label">조커</span>';
+  state.jokers.forEach(j => el.jokerArea.appendChild(jokerCardEl(j)));
+  for (let i = state.jokers.length; i < MAX_JOKERS; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'joker-slot-empty';
+    el.jokerArea.appendChild(slot);
+  }
+}
+
+function updateButtons() {
+  const sel = state.selected.size;
+  // 보스 '심령술사': 정확히 5장을 내야만 패 내기 가능
+  const forceFive = state.boss && state.boss.forceFive && sel !== 5;
+  el.playBtn.disabled = state.busy || sel === 0 || state.handsLeft <= 0 || forceFive;
+  el.discardBtn.disabled = state.busy || sel === 0 || state.discardsLeft <= 0;
+  el.playBtn.textContent = forceFive ? '5장 필요!' : `패 내기 (${state.handsLeft})`;
+  el.discardBtn.textContent = `버리기 (${state.discardsLeft})`;
+}
+
+function renderAll(animateNew = false) {
+  renderTopBar();
+  renderJokers();
+  renderHand(animateNew);
+  updateButtons();
+}
+
+// 선택 시 패 미리보기 표시 (족보 레벨/부싯돌 반영)
+function renderPreview() {
+  const cards = [...state.selected];
+  if (cards.length === 0) { el.handResult.innerHTML = ''; return; }
+  const hand = evaluateHand(cards);
+  let chips = handChipsOf(hand.type), mult = handMultOf(hand.type);
+  if (state.boss && state.boss.halve) { chips = Math.ceil(chips / 2); mult = Math.ceil(mult / 2); }
+  const lv = handLevel(hand.type);
+  el.handResult.innerHTML =
+    `<span>${hand.type.name}${lv > 1 ? ` <small style="color:var(--gold)">Lv.${lv}</small>` : ''}</span>` +
+    `<span class="chips">${chips} 칩</span>` +
+    `<span class="mult">× ${mult}</span>`;
+}
+
+function scorePopup(text) {
+  const pop = document.createElement('div');
+  pop.className = 'score-popup';
+  pop.textContent = text;
+  el.playedCards.parentElement.appendChild(pop);
+  setTimeout(() => pop.remove(), 1100);
+}
+
+/* ============================================================
+   게임 동작 (Milestone 1, 3)
+   ============================================================ */
+function toggleSelect(card) {
+  if (state.busy) return;
+  if (state.selected.has(card)) {
+    state.selected.delete(card);
+    sfx.deselect();
+  } else {
+    if (state.selected.size >= MAX_SELECT) return;
+    state.selected.add(card);
+    sfx.select();
+  }
+  renderHand();
+  renderPreview();
+  updateButtons();
+}
+
+let sortByRank = true;
+function sortHand() {
+  if (sortByRank) {
+    state.hand.sort((a, b) => b.value - a.value || a.suit.localeCompare(b.suit));
+  } else {
+    state.hand.sort((a, b) => a.suit.localeCompare(b.suit) || b.value - a.value);
+  }
+}
+
+function playHand() {
+  if (state.busy || state.selected.size === 0 || state.handsLeft <= 0) return;
+  state.busy = true;
+  const played = [...state.selected];
+  console.log('패 내기:', played.map(c => c.rank + c.sym).join(' ')); // Milestone 1 완료 기준
+  state.hand = state.hand.filter(c => !state.selected.has(c));
+  state.selected.clear();
+  state.handsLeft--;
+  sfx.play();
+
+  // 낸 카드를 플레이 영역에 표시
+  el.playedCards.innerHTML = '';
+  played.forEach((c, i) => {
+    const div = cardEl(c);
+    div.classList.add('played-anim');
+    if (isDebuffed(c)) div.classList.add('debuffed');
+    div.style.animationDelay = i * 70 + 'ms';
+    el.playedCards.appendChild(div);
+  });
+
+  renderHand();
+  updateButtons();
+
+  // 통계 갱신 (초신성: 현재 패 포함 / 카드 상어: 이전 패만)
+  const ht = evaluateHand(played).type;
+  state.handTypeCounts[ht.levelKey] = (state.handTypeCounts[ht.levelKey] || 0) + 1;
+
+  // 점수 계산 (조커 포함)
+  const result = scoreHand(played);
+  state.roundHandTypes.push(ht.levelKey);
+  // 패 낸 후 훅 (버스 탑승, 우주, 아이스크림, 탄산수 등)
+  state.jokers.slice().forEach(j => j.afterPlay && j.afterPlay(result, played));
+
+  setTimeout(() => {
+    const lv = handLevel(result.hand.type);
+    el.handResult.innerHTML =
+      `<span>${result.hand.type.name}${lv > 1 ? ` <small style="color:var(--gold)">Lv.${lv}</small>` : ''}</span>` +
+      `<span class="chips">${result.chips} 칩</span>` +
+      `<span class="mult">× ${result.mult}</span>` +
+      `<span class="total">= ${result.total.toLocaleString()}</span>`;
+
+    // 발동한 조커 팝 애니메이션
+    const jokerEls = el.jokerArea.querySelectorAll('.joker-card');
+    result.triggered.forEach(t => {
+      const je = jokerEls[t.index];
+      if (je) je.classList.add('pop');
+    });
+
+    sfx.score();
+    scorePopup('+' + result.total.toLocaleString());
+
+    state.roundScore += result.total;
+    if (state.roundScore > state.bestScore) state.bestScore = state.roundScore;
+    renderTopBar();
+
+    setTimeout(() => finishPlay(), 900);
+  }, 450);
+}
+
+function finishPlay() {
+  renderJokers(); // 성장형 조커 수치/파괴 반영
+  const target = currentTarget();
+  if (state.roundScore >= target) {
+    roundClear();
+    return;
+  }
+  if (state.handsLeft <= 0) {
+    gameOver();
+    return;
+  }
+  // 다음 패를 위해 카드 보충
+  drawCards(effectiveHandSize() - state.hand.length);
+  sortHand();
+  state.busy = false;
+  renderHand(true);
+  updateButtons();
+}
+
+function discardCards() {
+  if (state.busy || state.selected.size === 0 || state.discardsLeft <= 0) return;
+  const discarded = [...state.selected];
+  state.hand = state.hand.filter(c => !state.selected.has(c));
+  state.selected.clear();
+  state.discardsLeft--;
+  state.discardedCardsThisRound += discarded.length;
+  state.discardedJacksThisRound += discarded.filter(c => c.rank === 'J').length;
+  // 버리기 훅 (우편 환급, 성, 라면, 그을린 조커, 트레이딩 카드 등)
+  state.jokers.slice().forEach(j => j.onDiscard && j.onDiscard(discarded));
+  state.firstDiscardDone = true;
+  state.discardsUsedThisRound++;
+  sfx.discard();
+  drawCards(effectiveHandSize() - state.hand.length);
+  sortHand();
+  el.handResult.innerHTML = '';
+  renderHand(true);
+  renderTopBar();
+  renderJokers();
+  updateButtons();
+}
+
+/* ============================================================
+   라운드 클리어 / 게임오버 (Milestone 3, 5)
+   ============================================================ */
+let pendingReward = 0;
+
+function roundClear() {
+  // 보스 격파 훅 (로켓, 모닥불)
+  if (state.blindIdx === 2) state.jokers.slice().forEach(j => j.onBossDefeat && j.onBossDefeat());
+  // 라운드 종료 훅 (황금 조커, 로켓, 위성, 팝콘, 그로 미셸 등)
+  const notes = [];
+  state.jokers.slice().forEach(j => { if (j.onRoundEnd) { const r = j.onRoundEnd(); if (r) notes.push(r); } });
+
+  // 골드 보상: 블라인드 기본($3/$4/$5) + 남은 패 내기 ×$1 + 이자($5당 $1, 최대 $5, '달까지'면 2배)
+  const base = BLIND_REWARDS[state.blindIdx];
+  const handBonus = state.handsLeft;
+  let interest = Math.min(5, Math.floor(Math.max(0, state.gold) / 5));
+  if (hasJoker('to_the_moon')) interest += Math.min(5, Math.floor(Math.max(0, state.gold) / 5));
+  pendingReward = base + handBonus + interest;
+  const noteHTML = notes.length ? `<div style="font-size:15px; margin-top:6px;">${notes.join(' · ')}</div>` : '';
+
+  // 앤티 8 보스 클리어 = 승리!
+  if (state.blindIdx === 2 && state.ante === WIN_ANTE && !state.endless) {
+    state.gold += pendingReward;
+    pendingReward = 0;
+    sfx.clear();
+    el.victoryStats.innerHTML =
+      `앤티 ${WIN_ANTE}의 보스 블라인드를 격파했습니다!<br>` +
+      `최고 라운드 점수: <b style="color:var(--blue)">${state.bestScore.toLocaleString()}</b><br>` +
+      `보유 골드: <b style="color:var(--gold)">${state.gold}G</b>`;
+    showScreen('victoryScreen');
+    return;
+  }
+
+  sfx.clear();
+  el.clearReward.innerHTML =
+    `보상: <b style="color:var(--gold)">${pendingReward}G</b>` +
+    ` (블라인드 ${base}G + 남은 패 내기 ${handBonus}G + 이자 ${interest}G)` + noteHTML;
+  el.clearBanner.classList.add('show');
+}
+
+function enterShop() {
+  el.clearBanner.classList.remove('show');
+  state.gold += pendingReward;
+  pendingReward = 0;
+  openShop();
+}
+
+function advanceBlind() {
+  state.blindIdx++;
+  if (state.blindIdx >= 3) {
+    state.blindIdx = 0;
+    state.ante++;
+  }
+  startRound();
+  showScreen('gameScreen');
+}
+
+function gameOver() {
+  // 미스터 본즈: 목표의 25% 이상이면 살아남는다 (자신 파괴, 라운드 클리어 처리)
+  const bones = state.jokers.find(j => j.id === 'mr_bones');
+  if (bones && state.roundScore >= currentTarget() * 0.25) {
+    destroyJoker(bones);
+    renderJokers();
+    roundClear();
+    return;
+  }
+  sfx.gameover();
+  el.gameoverStats.innerHTML =
+    `도달한 앤티: <b style="color:var(--gold)">${state.ante}</b><br>` +
+    `블라인드: <b>${BLIND_NAMES[state.blindIdx]}</b><br>` +
+    `이번 라운드 점수: <b>${state.roundScore.toLocaleString()}</b> / ${currentTarget().toLocaleString()}<br>` +
+    `최고 라운드 점수: <b style="color:var(--blue)">${state.bestScore.toLocaleString()}</b>`;
+  showScreen('gameoverScreen');
+}
+
+/* ============================================================
+   상점 (Milestone 5)
+   ============================================================ */
+let shopStock = [];
+
+function weightedRarity() {
+  const r = Math.random() * 100;
+  let acc = 0;
+  for (const [k, w] of RARITY_WEIGHTS) { acc += w; if (r < acc) return k; }
+  return 'common';
+}
+
+function randomShopJoker(excludeIds) {
+  for (let tries = 0; tries < 50; tries++) {
+    const rar = weightedRarity();
+    const pool = JOKERS.filter(j => j.rarity === rar && !excludeIds.has(j.id));
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+  }
+  const pool = JOKERS.filter(j => !excludeIds.has(j.id));
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+}
+
+function stockShop() {
+  const exclude = new Set(state.jokers.map(j => j.id));
+  shopStock = [];
+  for (let i = 0; i < 2; i++) {
+    const j = randomShopJoker(exclude);
+    if (j) { exclude.add(j.id); shopStock.push({ kind: 'joker', joker: j, sold: false }); }
+  }
+  shuffle([...PLANETS]).slice(0, 2).forEach(p => shopStock.push({ kind: 'planet', planet: p, sold: false }));
+}
+
+function canAfford(cost) {
+  return state.gold - cost >= (hasJoker('credit_card') ? -20 : 0);
+}
+
+function planetPrice() { return hasJoker('astronomer') ? 0 : PLANET_COST; }
+
+function rerollCostNow() {
+  return (hasJoker('chaos') && !state.freeRerollUsed) ? 0 : state.rerollCost;
+}
+
+function rerollShop() {
+  const cost = rerollCostNow();
+  if (!canAfford(cost)) return;
+  state.gold -= cost;
+  if (cost === 0) state.freeRerollUsed = true;
+  else state.rerollCost++;
+  state.rerolls++; // 플래시 카드
+  sfx.discard();
+  stockShop();
+  renderShop();
+}
+
+function openShop() {
+  state.freeRerollUsed = false;
+  state.rerollCost = 5;
+  stockShop();
+  renderShop();
+  showScreen('shopScreen');
+}
+
+function planetCardEl(planet) {
+  const type = HAND_TYPES[planet.key];
+  const lv = handLevel(type);
+  const div = document.createElement('div');
+  div.className = 'joker-card';
+  div.style.setProperty('--j-c1', '#1d3a6e');
+  div.style.setProperty('--j-c2', '#0f1f3d');
+  div.style.setProperty('--j-border', '#4a7ec0');
+  div.innerHTML =
+    `<div class="j-icon">${planet.icon}</div>` +
+    `<div class="j-text"><div class="j-name">${planet.name}</div>` +
+    `<div class="j-desc">${type.name} 레벨업 (Lv.${lv}→${lv + 1})<br>+${type.upChips}칩 / 배수 +${type.upMult}</div></div>`;
+  return div;
+}
+
+function renderShop() {
+  el.shopGold.innerHTML = `보유 골드: <b>${state.gold}</b>G`;
+
+  el.shopItems.innerHTML = '';
+  if (shopStock.length === 0) {
+    el.shopItems.innerHTML = '<div class="shop-note">진열할 조커가 없습니다 (전부 보유 중!)</div>';
+  }
+  shopStock.forEach((item, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'shop-item' + (item.sold ? ' sold-out' : '');
+    const cost = item.kind === 'joker' ? item.joker.cost : planetPrice();
+    wrap.appendChild(item.kind === 'joker' ? jokerCardEl(item.joker) : planetCardEl(item.planet));
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    if (item.sold) {
+      btn.textContent = item.kind === 'planet' ? '사용 완료' : '판매 완료';
+      btn.disabled = true;
+    } else {
+      btn.textContent = cost === 0 ? '무료!' : `구매 ${cost}G`;
+      btn.disabled = !canAfford(cost) ||
+        (item.kind === 'joker' && state.jokers.length >= MAX_JOKERS);
+      btn.addEventListener('click', () => buyItem(i));
+    }
+    wrap.appendChild(btn);
+    el.shopItems.appendChild(wrap);
+  });
+
+  // 새로고침 버튼
+  const rc = rerollCostNow();
+  el.rerollBtn.textContent = rc === 0 ? '🎲 새로고침 (무료!)' : `🎲 새로고침 $${rc}`;
+  el.rerollBtn.disabled = !canAfford(rc);
+
+  // 보유 조커 + 판매 버튼
+  el.ownedJokers.innerHTML = '';
+  if (state.jokers.length === 0) {
+    el.ownedJokers.innerHTML = '<div class="shop-note">아직 조커가 없습니다</div>';
+  }
+  state.jokers.forEach((j, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.textAlign = 'center';
+    wrap.appendChild(jokerCardEl(j));
+    const sellBtn = document.createElement('button');
+    sellBtn.className = 'sell-btn';
+    const sellPrice = j.sellValue || Math.max(1, Math.floor(j.cost / 2));
+    sellBtn.textContent = `판매 +${sellPrice}G`;
+    sellBtn.addEventListener('click', () => sellJoker(i));
+    wrap.appendChild(sellBtn);
+    el.ownedJokers.appendChild(wrap);
+  });
+}
+
+function buyItem(stockIdx) {
+  const item = shopStock[stockIdx];
+  if (item.sold) return;
+  if (item.kind === 'joker') {
+    if (!canAfford(item.joker.cost) || state.jokers.length >= MAX_JOKERS) return;
+    state.gold -= item.joker.cost;
+    state.jokers.push(makeJoker(item.joker)); // 인스턴스 생성 (성장 변수 독립)
+  } else {
+    const cost = planetPrice();
+    if (!canAfford(cost)) return;
+    state.gold -= cost;
+    // 행성 카드는 구매 즉시 사용 — 해당 족보 레벨 +1 (영구)
+    levelUpHand(HAND_TYPES[item.planet.key].levelKey);
+    state.planetsUsed++;          // 별자리
+    state.planetsUniq.add(item.planet.id); // 위성
+  }
+  item.sold = true;
+  sfx.buy();
+  renderShop();
+}
+
+function sellJoker(jokerIdx) {
+  const j = state.jokers[jokerIdx];
+  state.gold += j.sellValue || Math.max(1, Math.floor(j.cost / 2));
+  state.jokers.splice(jokerIdx, 1);
+  // 판매 훅 (모닥불)
+  state.jokers.forEach(c => c.onSell && c.onSell());
+  sfx.discard();
+  renderShop();
+}
+
+/* ============================================================
+   이벤트 바인딩
+   ============================================================ */
+el.newGameBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
+el.retryBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
+el.playBtn.addEventListener('click', playHand);
+el.discardBtn.addEventListener('click', discardCards);
+el.sortBtn.addEventListener('click', () => {
+  sortByRank = !sortByRank;
+  sortHand();
+  renderHand();
+});
+el.toShopBtn.addEventListener('click', enterShop);
+el.nextRoundBtn.addEventListener('click', advanceBlind);
+el.rerollBtn.addEventListener('click', rerollShop);
+el.endlessBtn.addEventListener('click', () => { state.endless = true; beep(660, 0.08); openShop(); });
+el.victoryNewBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
+</script>
+</body>
+</html>
