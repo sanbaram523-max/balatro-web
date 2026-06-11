@@ -518,6 +518,67 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .joker-card.ed-holographic { box-shadow: 0 0 9px 2px #ff6ad5aa; }
 .joker-card.ed-polychrome { box-shadow: 0 0 11px 3px #7dff8aaa; }
 
+/* ---------- 부스터 팩 / 바우처 ---------- */
+.pack-card {
+  width: 130px;
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+  flex-shrink: 0;
+  border: 2px solid;
+}
+.pack-arcana   { background: linear-gradient(160deg, #5e3a78, #2e1c40); border-color: #9a6cc8; }
+.pack-celestial{ background: linear-gradient(160deg, #1d3a6e, #0e1d38); border-color: #4a7ec0; }
+.pack-buffoon  { background: linear-gradient(160deg, #784a2a, #3d2412); border-color: #c08a50; }
+.pack-spectral { background: linear-gradient(160deg, #1d6e62, #0e3830); border-color: #4ac0ae; }
+.pack-standard { background: linear-gradient(160deg, #555e68, #2a2f36); border-color: #9aa5b0; }
+.pack-card .p-icon { font-size: 30px; }
+.pack-card .p-name { font-weight: 700; color: var(--gold); font-size: 12px; margin: 4px 0 2px; }
+.pack-card .p-desc { font-size: 10px; opacity: 0.85; }
+.voucher-card {
+  width: 170px;
+  background: linear-gradient(160deg, #7a5a1d, #3d2d0e);
+  border: 2px solid #d4af37;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.voucher-card .v-name { font-weight: 700; color: var(--gold); font-size: 13px; }
+.voucher-card .v-desc { font-size: 10px; opacity: 0.9; margin: 4px 0; line-height: 1.4; }
+#packModal {
+  position: fixed; inset: 0;
+  background: #000000d8;
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 250;
+}
+#packModal.show { display: flex; animation: fadeIn 0.25s; }
+#packModalInner {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 20px;
+  max-width: 860px;
+  max-height: 88vh;
+  overflow-y: auto;
+  width: 94%;
+  text-align: center;
+}
+#packModalTitle { color: var(--gold); font-size: 22px; margin-bottom: 4px; }
+#packModalSub { font-size: 13px; opacity: 0.75; margin-bottom: 14px; }
+#packModalCards {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.pack-pick { cursor: pointer; transition: transform 0.12s; position: relative; }
+.pack-pick:hover { transform: translateY(-6px) scale(1.04); }
+.pack-pick.picked, .pack-pick.disabled { opacity: 0.3; pointer-events: none; }
+.consum-card.spectral { background: linear-gradient(145deg, #1d6e62, #0e3830); border-color: #4ac0ae; }
+.joker-card.ed-negative { filter: invert(0.85) hue-rotate(180deg); }
+
 /* ---------- 토스트 메시지 ---------- */
 #toast {
   position: fixed;
@@ -619,6 +680,16 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   <div id="shopGold">보유 골드: <b>0</b>G</div>
   <div id="shopItems"></div>
   <button id="rerollBtn" class="btn-blue" style="font-size:14px; padding:8px 22px;">🎲 새로고침 $5</button>
+  <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:flex-start;">
+    <div style="text-align:center;">
+      <div class="shop-note" style="margin-bottom:6px;">📦 부스터 팩</div>
+      <div id="shopPacks" style="display:flex; gap:12px;"></div>
+    </div>
+    <div style="text-align:center;">
+      <div class="shop-note" style="margin-bottom:6px;">🎟️ 바우처 (앤티당 1개)</div>
+      <div id="shopVoucher" style="display:flex; gap:12px;"></div>
+    </div>
+  </div>
   <div class="shop-note">보유 조커 (최대 5개) — 판매하면 판매가를 돌려받습니다</div>
   <div id="ownedJokers"></div>
   <div class="shop-note">보유 소모품 — 여기서도 사용할 수 있습니다 (카드 선택이 필요한 타로는 게임 화면에서)</div>
@@ -647,6 +718,16 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     <h3>🂠 남은 덱 <span id="deckModalCount" style="font-size:14px; opacity:0.8;"></span></h3>
     <div id="deckModalBody"></div>
     <button id="deckCloseBtn" class="btn-blue" style="margin-top:10px; font-size:14px; padding:8px 24px;">닫기</button>
+  </div>
+</div>
+
+<!-- ===================== 부스터 팩 열기 모달 ===================== -->
+<div id="packModal">
+  <div id="packModalInner">
+    <div id="packModalTitle"></div>
+    <div id="packModalSub"></div>
+    <div id="packModalCards"></div>
+    <button id="packSkipBtn" class="btn-blue" style="font-size:14px; padding:8px 24px;">건너뛰기 ▶</button>
   </div>
 </div>
 
@@ -706,6 +787,10 @@ const HAND_TYPES = {
   FOUR_KIND:      { rank: 7, name: '포카드',             base: 60,  mult: 7, upChips: 30, upMult: 3, levelKey: 'FOUR_KIND' },
   STRAIGHT_FLUSH: { rank: 8, name: '스트레이트 플러시',  base: 100, mult: 8, upChips: 40, upMult: 4, levelKey: 'STRAIGHT_FLUSH' },
   ROYAL_FLUSH:    { rank: 9, name: '로열 플러시',        base: 100, mult: 8, upChips: 40, upMult: 4, levelKey: 'STRAIGHT_FLUSH' },
+  // 히든 족보 — 카드 복제(죽음 타로, 크립티드)로만 도달 가능
+  FIVE_KIND:      { rank: 10, name: '파이브 카드',       base: 120, mult: 12, upChips: 35, upMult: 3, levelKey: 'FIVE_KIND', hidden: true },
+  FLUSH_HOUSE:    { rank: 11, name: '플러시 하우스',     base: 140, mult: 14, upChips: 40, upMult: 4, levelKey: 'FLUSH_HOUSE', hidden: true },
+  FLUSH_FIVE:     { rank: 12, name: '플러시 파이브',     base: 160, mult: 16, upChips: 50, upMult: 3, levelKey: 'FLUSH_FIVE', hidden: true },
 };
 
 // 족보 레벨 적용 수치
@@ -724,6 +809,10 @@ const PLANETS = [
   { id: 'earth',   name: '지구',   icon: '🌍', key: 'FULL_HOUSE' },
   { id: 'mars',    name: '화성',   icon: '🔴', key: 'FOUR_KIND' },
   { id: 'neptune', name: '해왕성', icon: '🔵', key: 'STRAIGHT_FLUSH' },
+  // 히든 족보용 — 해당 족보를 발견(1회 플레이)해야 등장
+  { id: 'planetx', name: '행성 X', icon: '🟣', key: 'FIVE_KIND' },
+  { id: 'ceres',   name: '세레스', icon: '⚪', key: 'FLUSH_HOUSE' },
+  { id: 'eris',    name: '에리스', icon: '🟤', key: 'FLUSH_FIVE' },
 ];
 const PLANET_COST = 3;
 const TAROT_COST = 3;
@@ -740,7 +829,7 @@ const SEAL_NAMES = {
   gold: '골드 인장 (낼 때 $3)', red: '레드 인장 (2회 발동)',
   blue: '블루 인장 (종료 시 행성 생성)', purple: '퍼플 인장 (버리면 타로 생성)',
 };
-const ED_NAMES = { foil: '포일 (+50칩)', holographic: '홀로그래픽 (+10배수)', polychrome: '폴리크롬 (×1.5배수)' };
+const ED_NAMES = { foil: '포일 (+50칩)', holographic: '홀로그래픽 (+10배수)', polychrome: '폴리크롬 (×1.5배수)', negative: '네거티브 (조커 슬롯 +1)' };
 
 /* ---------- 소모품(타로/행성) 시스템 ---------- */
 // 사용 규칙: use(sel)는 성공 시 메시지(없으면 undefined), 실패 시 { err: '이유' } 반환 (실패 시 소모 안 됨)
@@ -751,7 +840,12 @@ function addConsumable(item) {
   return true;
 }
 function randTarot() { return TAROTS[Math.floor(Math.random() * TAROTS.length)]; }
-function randPlanet() { return PLANETS[Math.floor(Math.random() * PLANETS.length)]; }
+function availablePlanets() {
+  // 히든 족보의 행성은 그 족보를 한 번이라도 플레이해야 등장
+  return PLANETS.filter(p => !HAND_TYPES[p.key].hidden || (state && state.handTypeCounts[HAND_TYPES[p.key].levelKey]));
+}
+function randPlanet() { const pool = availablePlanets(); return pool[Math.floor(Math.random() * pool.length)]; }
+function randSpectral() { return SPECTRALS[Math.floor(Math.random() * SPECTRALS.length)]; }
 
 // 선택한 카드 N장 필요 검증 헬퍼
 function needSel(min, max) {
@@ -861,7 +955,7 @@ const TAROTS = [
   { id: 'judgement', name: 'XX. 심판', icon: '📯',
     desc: '무작위 조커 생성 (슬롯 여유 시)',
     use() {
-      if (state.jokers.length >= MAX_JOKERS) return { err: '조커 슬롯이 가득 찼습니다' };
+      if (state.jokers.length >= maxJokers()) return { err: '조커 슬롯이 가득 찼습니다' };
       const owned = new Set(state.jokers.map(j => j.id));
       const def = randomShopJoker(owned);
       if (!def) return { err: '생성할 조커가 없습니다' };
@@ -870,6 +964,222 @@ const TAROTS = [
     } },
   { id: 'world', name: 'XXI. 세계', icon: '🌍',
     desc: '선택한 카드 최대 3장을 ♠로 변환', use() { return convertSel(3, 'spade'); } },
+];
+
+/* ---------- 스펙트럴 카드 18종 (발라트로 원작) ---------- */
+const ENH_KEYS = ['bonus', 'mult', 'wild', 'glass', 'steel', 'gold', 'lucky'];
+function randEnh() { return ENH_KEYS[Math.floor(Math.random() * ENH_KEYS.length)]; }
+// 새 카드를 만들어 덱과 손패에 추가
+function spawnCard(rankStr, suitKey, enh) {
+  const r = RANKS.find(x => x.rank === rankStr);
+  const s = SUITS.find(x => x.key === suitKey);
+  const c = { id: ++cardSeq, suit: s.key, sym: s.sym, rank: r.rank, value: r.value, chips: r.chips,
+              enhancement: enh || null, edition: null, seal: null };
+  state.fullDeck.push(c);
+  state.hand.push(c);
+  return c;
+}
+function destroyRandomHandCards(n) {
+  const destroyed = [];
+  for (let i = 0; i < n && state.hand.length; i++) {
+    const c = state.hand[Math.floor(Math.random() * state.hand.length)];
+    destroyCard(c);
+    destroyed.push(c);
+  }
+  return destroyed;
+}
+function sealSel(seal) {
+  const sel = needSel(1, 1);
+  if (sel.err) return sel;
+  sel[0].seal = seal;
+  return SEAL_NAMES[seal];
+}
+function copyJokerInstance(j) {
+  return Object.assign(Object.create(Object.getPrototypeOf(j)), j, { vars: JSON.parse(JSON.stringify(j.vars || {})) });
+}
+
+const SPECTRALS = [
+  { id: 'familiar', name: '사역마', icon: '🐦‍⬛',
+    desc: '손패 1장 무작위 파괴, 강화된 그림 카드 3장을 손패에 추가',
+    use() {
+      if (!state.hand.length) return { err: '손패가 없습니다 (라운드 중 사용)' };
+      destroyRandomHandCards(1);
+      const faces = ['J', 'Q', 'K'];
+      for (let i = 0; i < 3; i++) spawnCard(faces[Math.floor(Math.random() * 3)], randSuit(), randEnh());
+      return '그림 카드 3장 추가!';
+    } },
+  { id: 'grim', name: '그림', icon: '☠️',
+    desc: '손패 1장 무작위 파괴, 강화된 A 2장을 손패에 추가',
+    use() {
+      if (!state.hand.length) return { err: '손패가 없습니다 (라운드 중 사용)' };
+      destroyRandomHandCards(1);
+      for (let i = 0; i < 2; i++) spawnCard('A', randSuit(), randEnh());
+      return 'A 2장 추가!';
+    } },
+  { id: 'incantation', name: '주문', icon: '📜',
+    desc: '손패 1장 무작위 파괴, 강화된 숫자 카드 4장을 손패에 추가',
+    use() {
+      if (!state.hand.length) return { err: '손패가 없습니다 (라운드 중 사용)' };
+      destroyRandomHandCards(1);
+      const nums = ['2','3','4','5','6','7','8','9','10'];
+      for (let i = 0; i < 4; i++) spawnCard(nums[Math.floor(Math.random() * nums.length)], randSuit(), randEnh());
+      return '숫자 카드 4장 추가!';
+    } },
+  { id: 'talisman', name: '부적', icon: '🧿',
+    desc: '선택한 카드 1장에 골드 인장', use() { return sealSel('gold'); } },
+  { id: 'aura', name: '아우라', icon: '🌈',
+    desc: '선택한 카드 1장에 무작위 에디션 부여',
+    use() {
+      const sel = needSel(1, 1);
+      if (sel.err) return sel;
+      const r = Math.random();
+      sel[0].edition = r < 0.5 ? 'foil' : r < 0.85 ? 'holographic' : 'polychrome';
+      return ED_NAMES[sel[0].edition];
+    } },
+  { id: 'wraith', name: '망령', icon: '👻',
+    desc: '무작위 레어 조커 생성, 돈이 $0이 됨',
+    use() {
+      if (state.jokers.length >= maxJokers()) return { err: '조커 슬롯이 가득 찼습니다' };
+      const owned = new Set(state.jokers.map(j => j.id));
+      const pool = JOKERS.filter(j => j.rarity === 'rare' && !owned.has(j.id));
+      if (!pool.length) return { err: '생성할 레어 조커가 없습니다' };
+      state.jokers.push(makeJoker(pool[Math.floor(Math.random() * pool.length)]));
+      state.gold = Math.min(state.gold, 0);
+      return '레어 조커 생성, 돈 $0!';
+    } },
+  { id: 'sigil', name: '시질', icon: '🔯',
+    desc: '손패 전체를 무작위 단일 무늬로 변환',
+    use() {
+      if (!state.hand.length) return { err: '손패가 없습니다 (라운드 중 사용)' };
+      const s = randSuit();
+      state.hand.forEach(c => setCardSuit(c, s));
+      return `전부 ${SUIT_SYM[s]}로!`;
+    } },
+  { id: 'ouija', name: '위자보드', icon: '🪧',
+    desc: '손패 전체를 무작위 단일 랭크로 변환, 손패 크기 -1',
+    use() {
+      if (!state.hand.length) return { err: '손패가 없습니다 (라운드 중 사용)' };
+      const r = randRank();
+      state.hand.forEach(c => setCardRank(c, r));
+      state.extraHandSize--;
+      return `전부 ${r}로!`;
+    } },
+  { id: 'ectoplasm', name: '엑토플라즘', icon: '🫧',
+    desc: '무작위 조커에 네거티브(조커 슬롯 +1), 손패 크기 -1',
+    use() {
+      const pool = state.jokers.filter(j => !j.edition);
+      if (!pool.length) return { err: '에디션 없는 조커가 없습니다' };
+      pool[Math.floor(Math.random() * pool.length)].edition = 'negative';
+      state.extraHandSize--;
+      return '네거티브 부여!';
+    } },
+  { id: 'immolate', name: '소각', icon: '🔥',
+    desc: '손패 5장 무작위 파괴, $20 획득',
+    use() {
+      if (!state.hand.length) return { err: '손패가 없습니다 (라운드 중 사용)' };
+      destroyRandomHandCards(5);
+      state.gold += 20;
+      return '+$20!';
+    } },
+  { id: 'ankh', name: '앙크', icon: '☥',
+    desc: '무작위 조커 1개 복제, 나머지 조커 전부 파괴',
+    use() {
+      if (!state.jokers.length) return { err: '조커가 없습니다' };
+      const keep = state.jokers[Math.floor(Math.random() * state.jokers.length)];
+      state.jokers = [keep, copyJokerInstance(keep)];
+      return `${keep.name} ×2!`;
+    } },
+  { id: 'deja_vu', name: '데자뷔', icon: '🔁',
+    desc: '선택한 카드 1장에 레드 인장', use() { return sealSel('red'); } },
+  { id: 'hex', name: '저주', icon: '🧙',
+    desc: '무작위 조커에 폴리크롬, 나머지 조커 전부 파괴',
+    use() {
+      const pool = state.jokers.filter(j => !j.edition);
+      if (!pool.length) return { err: '에디션 없는 조커가 없습니다' };
+      const keep = pool[Math.floor(Math.random() * pool.length)];
+      keep.edition = 'polychrome';
+      state.jokers = [keep];
+      return `${keep.name}만 남고 폴리크롬!`;
+    } },
+  { id: 'trance', name: '최면', icon: '😶‍🌫️',
+    desc: '선택한 카드 1장에 블루 인장', use() { return sealSel('blue'); } },
+  { id: 'medium', name: '영매', icon: '🕯️',
+    desc: '선택한 카드 1장에 퍼플 인장', use() { return sealSel('purple'); } },
+  { id: 'cryptid', name: '크립티드', icon: '🦎',
+    desc: '선택한 카드 1장의 복사본 2장을 손패에 추가',
+    use() {
+      const sel = needSel(1, 1);
+      if (sel.err) return sel;
+      const o = sel[0];
+      for (let i = 0; i < 2; i++) {
+        const c = spawnCard(o.rank, o.suit, o.enhancement);
+        c.edition = o.edition; c.seal = o.seal;
+      }
+      return `${o.rank}${o.sym} ×2 추가!`;
+    } },
+  { id: 'soul', name: '영혼', icon: '💜',
+    desc: '전설 조커 생성!',
+    use() {
+      if (state.jokers.length >= maxJokers()) return { err: '조커 슬롯이 가득 찼습니다' };
+      const owned = new Set(state.jokers.map(j => j.id));
+      const pool = JOKERS.filter(j => j.rarity === 'legendary' && !owned.has(j.id));
+      if (!pool.length) return { err: '생성할 전설 조커가 없습니다' };
+      state.jokers.push(makeJoker(pool[Math.floor(Math.random() * pool.length)]));
+      return '전설 조커 강림!';
+    } },
+  { id: 'black_hole', name: '블랙홀', icon: '🕳️',
+    desc: '모든 족보 레벨 +1',
+    use() {
+      const keys = new Set(Object.values(HAND_TYPES).map(t => t.levelKey));
+      keys.forEach(k => levelUpHand(k));
+      return '모든 족보 레벨업!';
+    } },
+];
+
+/* ---------- 부스터 팩 ---------- */
+const PACK_KINDS = {
+  arcana:    { name: '아르카나 팩', icon: '🔮', cls: 'pack-arcana',    content: 'tarot' },
+  celestial: { name: '천체 팩',     icon: '🪐', cls: 'pack-celestial', content: 'planet' },
+  buffoon:   { name: '어릿광대 팩', icon: '🤡', cls: 'pack-buffoon',   content: 'joker' },
+  spectral:  { name: '스펙트럴 팩', icon: '👻', cls: 'pack-spectral',  content: 'spectral' },
+  standard:  { name: '스탠다드 팩', icon: '🂡', cls: 'pack-standard',  content: 'card' },
+};
+// 사이즈: [비용, 보여주는 수, 고르는 수] — 어릿광대/스펙트럴은 보여주는 수가 적다
+function packSizes(kindId) {
+  const few = kindId === 'buffoon' || kindId === 'spectral';
+  return [
+    { size: '',     cost: 4, show: few ? 2 : 3, pick: 1 },
+    { size: '점보 ', cost: 6, show: few ? 4 : 5, pick: 1 },
+    { size: '메가 ', cost: 8, show: few ? 4 : 5, pick: 2 },
+  ];
+}
+function randPack() {
+  const kinds = Object.keys(PACK_KINDS);
+  const kindId = kinds[Math.floor(Math.random() * kinds.length)];
+  const r = Math.random();
+  const sz = packSizes(kindId)[r < 0.7 ? 0 : r < 0.9 ? 1 : 2];
+  return { kindId, ...sz };
+}
+
+/* ---------- 바우처 14종 (영구 업그레이드, 앤티당 1개, $10) ---------- */
+const VOUCHER_COST = 10;
+function hasVoucher(id) { return !!(state && state.vouchers.has(id)); }
+const VOUCHERS = [
+  { id: 'overstock',      name: '재고 과잉',   icon: '🛒', desc: '상점 조커 슬롯 +1 (2→3)' },
+  { id: 'clearance',      name: '정리 세일',   icon: '🏷️', desc: '상점 카드·팩 25% 할인' },
+  { id: 'hone',           name: '연마',        icon: '✨', desc: '에디션 조커 2배 등장' },
+  { id: 'reroll_surplus', name: '리롤 잉여',   icon: '🎲', desc: '새로고침 비용 $2 할인' },
+  { id: 'crystal_ball',   name: '수정 구슬',   icon: '🔮', desc: '소모품 슬롯 +1', onBuy() { state.consumableSlots++; } },
+  { id: 'telescope',      name: '망원경',      icon: '🔭', desc: '천체 팩에 최다 사용 족보의 행성 확정 등장' },
+  { id: 'grabber',        name: '그래버',      icon: '🤲', desc: '라운드별 패 내기 +1 (영구)' },
+  { id: 'wasteful',       name: '낭비',        icon: '🗑️', desc: '라운드별 버리기 +1 (영구)' },
+  { id: 'tarot_merchant', name: '타로 상인',   icon: '🃏', desc: '상점에 타로 카드 2배 등장' },
+  { id: 'planet_merchant',name: '행성 상인',   icon: '🪐', desc: '상점에 행성 카드 2배 등장' },
+  { id: 'seed_money',     name: '종잣돈',      icon: '💰', desc: '이자 상한 $5 → $10' },
+  { id: 'blank',          name: '공백',        icon: '⬜', desc: '아무것도 하지 않습니다' },
+  { id: 'hieroglyph',     name: '상형문자',    icon: '🗿', desc: '앤티 -1, 라운드별 패 내기 -1',
+    onBuy() { state.ante = Math.max(1, state.ante - 1); } },
+  { id: 'paint_brush',    name: '페인트붓',    icon: '🖌️', desc: '손패 크기 +1' },
 ];
 
 const MAX_JOKERS = 5;
@@ -904,6 +1214,7 @@ function levelUpHand(levelKey, n = 1) {
   state.handLevels[levelKey] = (state.handLevels[levelKey] || 1) + n;
 }
 function jokerSum(field) { return state.jokers.reduce((s, j) => s + (j[field] || 0), 0); }
+function maxJokers() { return MAX_JOKERS + state.jokers.filter(j => j.edition === 'negative').length; }
 function destroyJoker(j) {
   const i = state.jokers.indexOf(j);
   if (i >= 0) state.jokers.splice(i, 1);
@@ -1057,7 +1368,7 @@ const JOKERS = [
   { id: 'riff_raff', name: '어중이떠중이', icon: '👥', rarity: 'common', cost: 6,
     desc: '라운드 시작 시 일반 조커 2개 생성 (슬롯 여유 시)',
     onRoundStart() {
-      for (let i = 0; i < 2 && state.jokers.length < MAX_JOKERS; i++) {
+      for (let i = 0; i < 2 && state.jokers.length < maxJokers(); i++) {
         const owned = new Set(state.jokers.map(j => j.id));
         const pool = JOKERS.filter(j => j.rarity === 'common' && !owned.has(j.id));
         if (pool.length) state.jokers.push(makeJoker(pool[Math.floor(Math.random() * pool.length)]));
@@ -1100,7 +1411,7 @@ const JOKERS = [
   /* ===== 희귀 (Uncommon) ===== */
   { id: 'stencil', name: '조커 스텐실', icon: '🖼️', rarity: 'uncommon', cost: 8,
     desc: '빈 조커 슬롯 1개당 배수 ×1 (자신 포함)',
-    apply(ctx) { const n = Math.max(1, MAX_JOKERS - state.jokers.length + 1); if (n > 1) { ctx.mult *= n; return `배수 ×${n}`; } } },
+    apply(ctx) { const n = Math.max(1, maxJokers() - state.jokers.length + 1); if (n > 1) { ctx.mult *= n; return `배수 ×${n}`; } } },
   { id: 'four_fingers', name: '네 손가락', icon: '🖐️', rarity: 'uncommon', cost: 7,
     desc: '4장으로도 플러시/스트레이트 인정' },
   { id: 'loyalty_card', name: '충성 카드', icon: '🎫', rarity: 'uncommon', cost: 5, vars: { left: 5 },
@@ -1432,7 +1743,10 @@ function evaluateHand(cards) {
   const isRoyal = isStraight && straightHigh === 14 && evalCards.every(c => c.value >= 10);
 
   let type;
-  if (isStraight && isFlush) type = isRoyal ? HAND_TYPES.ROYAL_FLUSH : HAND_TYPES.STRAIGHT_FLUSH;
+  if (countVals[0] === 5 && isFlush) type = HAND_TYPES.FLUSH_FIVE;
+  else if (countVals[0] === 3 && countVals[1] === 2 && isFlush) type = HAND_TYPES.FLUSH_HOUSE;
+  else if (countVals[0] === 5) type = HAND_TYPES.FIVE_KIND;
+  else if (isStraight && isFlush) type = isRoyal ? HAND_TYPES.ROYAL_FLUSH : HAND_TYPES.STRAIGHT_FLUSH;
   else if (countVals[0] === 4) type = HAND_TYPES.FOUR_KIND;
   else if (countVals[0] === 3 && countVals[1] === 2) type = HAND_TYPES.FULL_HOUSE;
   else if (isFlush) type = HAND_TYPES.FLUSH;
@@ -1550,9 +1864,14 @@ function newGame() {
     firstDiscardDone: false,
     // 영구 덱 + 소모품 (1+2단계)
     fullDeck: createDeck(),   // 런 내내 유지되는 덱 (타로로 강화/파괴/복제)
-    consumables: [],          // 보유 소모품 (타로/행성)
+    consumables: [],          // 보유 소모품 (타로/행성/스펙트럴)
     consumableSlots: 2,
     lastConsumable: null,     // '광대' 타로용
+    // 바우처 + 팩 (3단계)
+    vouchers: new Set(),      // 구매한 바우처 (영구)
+    extraHandSize: 0,         // 위자보드/엑토플라즘의 손패 페널티
+    anteVoucher: null,        // 이번 앤티의 상점 바우처
+    voucherAnte: 0,
     // 라운드별 상태 (startRound에서 초기화)
     deck: [], hand: [], selected: new Set(),
     roundScore: 0, handsLeft: 0, discardsLeft: 0,
@@ -1569,7 +1888,8 @@ function pickBoss() {
 }
 
 function effectiveHandSize() {
-  return Math.max(1, HAND_SIZE + jokerSum('handSizeMod')
+  return Math.max(1, HAND_SIZE + jokerSum('handSizeMod') + state.extraHandSize
+    + (hasVoucher('paint_brush') ? 1 : 0)
     - (state.boss && state.boss.handSizeDown ? state.boss.handSizeDown : 0));
 }
 
@@ -1579,10 +1899,11 @@ function startRound() {
   state.hand = [];
   state.selected = new Set();
   state.roundScore = 0;
+  const voucherHands = (hasVoucher('grabber') ? 1 : 0) - (hasVoucher('hieroglyph') ? 1 : 0);
   state.handsLeft = state.boss && state.boss.oneHand
-    ? 1 : Math.max(1, HANDS_PER_ROUND + jokerSum('handsMod'));
+    ? 1 : Math.max(1, HANDS_PER_ROUND + jokerSum('handsMod') + voucherHands);
   state.discardsLeft = state.boss && state.boss.noDiscards
-    ? 0 : Math.max(0, DISCARDS_PER_ROUND + jokerSum('discardsMod'));
+    ? 0 : Math.max(0, DISCARDS_PER_ROUND + jokerSum('discardsMod') + (hasVoucher('wasteful') ? 1 : 0));
   state.discardedCardsThisRound = 0;
   state.roundHandTypes = [];
   state.discardsUsedThisRound = 0;
@@ -1645,6 +1966,8 @@ const el = {};
  'deckModalBody', 'deckModalCount', 'deckCloseBtn',
  'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
+ 'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
+ 'packModalCards', 'packSkipBtn',
  'clearReward', 'toShopBtn', 'gameoverStats',
 ].forEach(id => { el[id] = document.getElementById(id); });
 
@@ -1736,7 +2059,7 @@ function jokerCardEl(joker) {
 /* ---------- 소모품 렌더링/사용 ---------- */
 function consumEl(item) {
   const div = document.createElement('div');
-  div.className = 'consum-card' + (item.kind === 'tarot' ? ' tarot' : '');
+  div.className = 'consum-card' + (item.kind === 'tarot' ? ' tarot' : item.kind === 'spectral' ? ' spectral' : '');
   if (item.kind === 'planet') {
     const type = HAND_TYPES[item.def.key];
     const lv = handLevel(type);
@@ -1799,7 +2122,7 @@ function useConsumable(i) {
     toast('⚠️ ' + result.err);
     return;
   }
-  if (item.def.id !== 'fool') state.lastConsumable = item;
+  if (item.def.id !== 'fool' && item.kind !== 'spectral') state.lastConsumable = item; // '광대'는 타로/행성만 복제
   state.selected.clear();
   sfx.buy();
   toast(`${item.def.name}: ${result || '사용!'}`);
@@ -1861,7 +2184,7 @@ function renderDeckModal() {
 function renderJokers() {
   el.jokerArea.innerHTML = '<span class="area-label">조커</span>';
   state.jokers.forEach(j => el.jokerArea.appendChild(jokerCardEl(j)));
-  for (let i = state.jokers.length; i < MAX_JOKERS; i++) {
+  for (let i = state.jokers.length; i < maxJokers(); i++) {
     const slot = document.createElement('div');
     slot.className = 'joker-slot-empty';
     el.jokerArea.appendChild(slot);
@@ -2064,8 +2387,9 @@ function roundClear() {
   // 골드 보상: 블라인드 기본($3/$4/$5) + 남은 패 내기 ×$1 + 이자($5당 $1, 최대 $5, '달까지'면 2배)
   const base = BLIND_REWARDS[state.blindIdx];
   const handBonus = state.handsLeft;
-  let interest = Math.min(5, Math.floor(Math.max(0, state.gold) / 5));
-  if (hasJoker('to_the_moon')) interest += Math.min(5, Math.floor(Math.max(0, state.gold) / 5));
+  const interestCap = hasVoucher('seed_money') ? 10 : 5; // 종잣돈 바우처
+  let interest = Math.min(interestCap, Math.floor(Math.max(0, state.gold) / 5));
+  if (hasJoker('to_the_moon')) interest += Math.min(interestCap, Math.floor(Math.max(0, state.gold) / 5));
   pendingReward = base + handBonus + interest;
   const noteHTML = notes.length ? `<div style="font-size:15px; margin-top:6px;">${notes.join(' · ')}</div>` : '';
 
@@ -2147,10 +2471,11 @@ function randomShopJoker(excludeIds) {
 }
 
 function rollJokerEdition() {
+  const m = hasVoucher('hone') ? 2 : 1; // '연마' 바우처: 에디션 2배
   const r = Math.random();
-  if (r < 0.04) return 'foil';
-  if (r < 0.068) return 'holographic';
-  if (r < 0.08) return 'polychrome';
+  if (r < 0.04 * m) return 'foil';
+  if (r < 0.068 * m) return 'holographic';
+  if (r < 0.08 * m) return 'polychrome';
   return null;
 }
 const ED_PRICE = { foil: 2, holographic: 3, polychrome: 5 };
@@ -2158,25 +2483,48 @@ const ED_PRICE = { foil: 2, holographic: 3, polychrome: 5 };
 function stockShop() {
   const exclude = new Set(state.jokers.map(j => j.id));
   shopStock = [];
-  for (let i = 0; i < 2; i++) {
+  const jokerSlots = hasVoucher('overstock') ? 3 : 2; // '재고 과잉' 바우처
+  for (let i = 0; i < jokerSlots; i++) {
     const j = randomShopJoker(exclude);
     if (j) {
       exclude.add(j.id);
       shopStock.push({ kind: 'joker', joker: j, edition: rollJokerEdition(), sold: false });
     }
   }
-  // 소모품 2칸: 타로/행성 반반
+  // 소모품 2칸: 타로/행성 (상인 바우처가 가중치 2배)
+  const tw = hasVoucher('tarot_merchant') ? 2 : 1;
+  const pw = hasVoucher('planet_merchant') ? 2 : 1;
   for (let i = 0; i < 2; i++) {
-    shopStock.push(Math.random() < 0.5
+    shopStock.push(Math.random() < tw / (tw + pw)
       ? { kind: 'consum', c: { kind: 'tarot', def: randTarot() }, sold: false }
       : { kind: 'consum', c: { kind: 'planet', def: randPlanet() }, sold: false });
   }
 }
 
-function shopItemPrice(item) {
-  if (item.kind === 'joker') return item.joker.cost + (item.edition ? ED_PRICE[item.edition] : 0);
-  return item.c.kind === 'planet' ? planetPrice() : TAROT_COST;
+let shopPacks = [];
+function stockPacks() {
+  shopPacks = [randPack(), randPack()].map(p => ({ pack: p, sold: false }));
 }
+
+function ensureAnteVoucher() {
+  // 앤티가 바뀌면 새 바우처 진열 (안 산 바우처 중에서)
+  if (state.voucherAnte === state.ante && state.anteVoucher) return;
+  state.voucherAnte = state.ante;
+  const pool = VOUCHERS.filter(v => !state.vouchers.has(v.id));
+  state.anteVoucher = pool.length
+    ? { def: pool[Math.floor(Math.random() * pool.length)], sold: false }
+    : null;
+}
+
+function discounted(p) { // '정리 세일' 바우처: 25% 할인
+  return hasVoucher('clearance') ? Math.max(1, Math.round(p * 0.75)) : p;
+}
+function shopItemPrice(item) {
+  if (item.kind === 'joker') return discounted(item.joker.cost + (item.edition ? ED_PRICE[item.edition] : 0));
+  if (item.c.kind === 'planet') return planetPrice() === 0 ? 0 : discounted(planetPrice());
+  return discounted(TAROT_COST);
+}
+function packPrice(pack) { return discounted(pack.cost); }
 
 function canAfford(cost) {
   return state.gold - cost >= (hasJoker('credit_card') ? -20 : 0);
@@ -2185,7 +2533,8 @@ function canAfford(cost) {
 function planetPrice() { return hasJoker('astronomer') ? 0 : PLANET_COST; }
 
 function rerollCostNow() {
-  return (hasJoker('chaos') && !state.freeRerollUsed) ? 0 : state.rerollCost;
+  if (hasJoker('chaos') && !state.freeRerollUsed) return 0;
+  return Math.max(0, state.rerollCost - (hasVoucher('reroll_surplus') ? 2 : 0));
 }
 
 function rerollShop() {
@@ -2204,6 +2553,8 @@ function openShop() {
   state.freeRerollUsed = false;
   state.rerollCost = 5;
   stockShop();
+  stockPacks();
+  ensureAnteVoucher();
   renderShop();
   showScreen('shopScreen');
 }
@@ -2234,7 +2585,7 @@ function renderShop() {
     } else {
       btn.textContent = cost === 0 ? '무료!' : `구매 ${cost}G`;
       btn.disabled = !canAfford(cost) ||
-        (item.kind === 'joker' && state.jokers.length >= MAX_JOKERS) ||
+        (item.kind === 'joker' && state.jokers.length >= maxJokers()) ||
         (item.kind === 'consum' && !hasConsumRoom());
       if (item.kind === 'consum' && !hasConsumRoom()) btn.textContent = '슬롯 가득 참';
       btn.addEventListener('click', () => buyItem(i));
@@ -2248,6 +2599,63 @@ function renderShop() {
   const rc = rerollCostNow();
   el.rerollBtn.textContent = rc === 0 ? '🎲 새로고침 (무료!)' : `🎲 새로고침 $${rc}`;
   el.rerollBtn.disabled = !canAfford(rc);
+
+  // 부스터 팩
+  el.shopPacks.innerHTML = '';
+  shopPacks.forEach((item, i) => {
+    const k = PACK_KINDS[item.pack.kindId];
+    const wrap = document.createElement('div');
+    wrap.className = 'shop-item' + (item.sold ? ' sold-out' : '');
+    wrap.style.width = 'auto';
+    const card = document.createElement('div');
+    card.className = 'pack-card ' + k.cls;
+    card.innerHTML =
+      `<div class="p-icon">${k.icon}</div>` +
+      `<div class="p-name">${item.pack.size}${k.name}</div>` +
+      `<div class="p-desc">${item.pack.show}장 중 ${item.pack.pick}장 선택</div>`;
+    wrap.appendChild(card);
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    const cost = packPrice(item.pack);
+    if (item.sold) { btn.textContent = '개봉 완료'; btn.disabled = true; }
+    else {
+      btn.textContent = `개봉 ${cost}G`;
+      btn.disabled = !canAfford(cost);
+      btn.addEventListener('click', () => buyPack(i));
+    }
+    wrap.appendChild(btn);
+    el.shopPacks.appendChild(wrap);
+  });
+
+  // 바우처
+  el.shopVoucher.innerHTML = '';
+  if (state.anteVoucher && !state.anteVoucher.sold) {
+    const v = state.anteVoucher.def;
+    const wrap = document.createElement('div');
+    wrap.className = 'shop-item';
+    wrap.style.width = 'auto';
+    const card = document.createElement('div');
+    card.className = 'voucher-card';
+    card.innerHTML = `<div style="font-size:26px;">${v.icon}</div><div class="v-name">${v.name}</div><div class="v-desc">${v.desc}</div>`;
+    wrap.appendChild(card);
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    btn.textContent = `구매 ${VOUCHER_COST}G`;
+    btn.disabled = !canAfford(VOUCHER_COST);
+    btn.addEventListener('click', buyVoucher);
+    wrap.appendChild(btn);
+    el.shopVoucher.appendChild(wrap);
+  } else {
+    el.shopVoucher.innerHTML = `<div class="shop-note" style="padding:20px;">${state.anteVoucher ? '구매 완료 — 다음 앤티에 새 바우처' : '모든 바우처 보유!'}</div>`;
+  }
+  // 보유 바우처 표시
+  if (state.vouchers.size) {
+    const owned = document.createElement('div');
+    owned.className = 'shop-note';
+    owned.style.maxWidth = '180px';
+    owned.textContent = '보유: ' + [...state.vouchers].map(id => VOUCHERS.find(v => v.id === id).name).join(', ');
+    el.shopVoucher.appendChild(owned);
+  }
 
   // 보유 조커 + 판매 버튼
   el.ownedJokers.innerHTML = '';
@@ -2274,7 +2682,7 @@ function buyItem(stockIdx) {
   const cost = shopItemPrice(item);
   if (!canAfford(cost)) return;
   if (item.kind === 'joker') {
-    if (state.jokers.length >= MAX_JOKERS) return;
+    if (state.jokers.length >= maxJokers()) return;
     state.gold -= cost;
     const inst = makeJoker(item.joker); // 인스턴스 생성 (성장 변수 독립)
     inst.edition = item.edition || null;
@@ -2286,6 +2694,143 @@ function buyItem(stockIdx) {
   }
   item.sold = true;
   sfx.buy();
+  renderShop();
+}
+
+function buyVoucher() {
+  if (!state.anteVoucher || state.anteVoucher.sold || !canAfford(VOUCHER_COST)) return;
+  const v = state.anteVoucher.def;
+  state.gold -= VOUCHER_COST;
+  state.vouchers.add(v.id);
+  if (v.onBuy) v.onBuy();
+  state.anteVoucher.sold = true;
+  sfx.buy();
+  toast(`바우처: ${v.name}!`);
+  renderShop();
+}
+
+/* ---------- 부스터 팩 개봉 ---------- */
+let packState = null; // { content, picksLeft, items: [{data, picked}] }
+
+function randomPackCard() {
+  // 스탠다드 팩: 무작위 강화/에디션/인장이 붙을 수 있는 플레잉 카드
+  const s = SUITS[Math.floor(Math.random() * 4)];
+  const r = RANKS[Math.floor(Math.random() * RANKS.length)];
+  const c = { id: ++cardSeq, suit: s.key, sym: s.sym, rank: r.rank, value: r.value, chips: r.chips,
+              enhancement: null, edition: null, seal: null };
+  if (Math.random() < 0.4) c.enhancement = randEnh();
+  const e = Math.random();
+  if (e < 0.05) c.edition = 'foil';
+  else if (e < 0.08) c.edition = 'holographic';
+  else if (e < 0.10) c.edition = 'polychrome';
+  if (Math.random() < 0.2) {
+    const seals = ['gold', 'red', 'blue', 'purple'];
+    c.seal = seals[Math.floor(Math.random() * 4)];
+  }
+  return c;
+}
+
+function buyPack(packIdx) {
+  const item = shopPacks[packIdx];
+  if (item.sold || !canAfford(packPrice(item.pack))) return;
+  state.gold -= packPrice(item.pack);
+  item.sold = true;
+  sfx.buy();
+  openPack(item.pack);
+  renderShop();
+}
+
+function openPack(pack) {
+  const k = PACK_KINDS[pack.kindId];
+  const items = [];
+  const usedIds = new Set();
+  for (let i = 0; i < pack.show; i++) {
+    let data = null;
+    if (k.content === 'tarot') {
+      const pool = TAROTS.filter(t => !usedIds.has(t.id));
+      data = pool[Math.floor(Math.random() * pool.length)];
+    } else if (k.content === 'planet') {
+      // '망원경' 바우처: 첫 칸은 최다 사용 족보의 행성 확정
+      if (i === 0 && hasVoucher('telescope')) {
+        let bestKey = null, bestN = 0;
+        for (const [key, n] of Object.entries(state.handTypeCounts)) if (n > bestN) { bestN = n; bestKey = key; }
+        data = PLANETS.find(p => HAND_TYPES[p.key].levelKey === bestKey) || randPlanet();
+      } else {
+        const pool = availablePlanets().filter(p => !usedIds.has(p.id));
+        data = pool.length ? pool[Math.floor(Math.random() * pool.length)] : randPlanet();
+      }
+    } else if (k.content === 'spectral') {
+      const pool = SPECTRALS.filter(s => !usedIds.has(s.id));
+      data = pool[Math.floor(Math.random() * pool.length)];
+    } else if (k.content === 'joker') {
+      const exclude = new Set([...state.jokers.map(j => j.id), ...usedIds]);
+      data = randomShopJoker(exclude);
+      if (!data) continue;
+    } else { // card
+      data = randomPackCard();
+    }
+    if (data.id) usedIds.add(data.id);
+    items.push({ data, picked: false });
+  }
+  packState = { content: k.content, picksLeft: pack.pick, items };
+  el.packModalTitle.textContent = `${k.icon} ${pack.size}${k.name}`;
+  renderPackModal();
+  el.packModal.classList.add('show');
+}
+
+function renderPackModal() {
+  el.packModalSub.textContent = `${packState.picksLeft}장을 선택하세요`;
+  el.packModalCards.innerHTML = '';
+  packState.items.forEach((it, i) => {
+    let div;
+    if (packState.content === 'joker') div = jokerCardEl(it.data);
+    else if (packState.content === 'card') div = cardEl(it.data);
+    else div = consumEl({ kind: packState.content, def: it.data });
+    div.classList.add('pack-pick');
+    // 선택 불가 조건 표시
+    let blocked = false;
+    if (!it.picked) {
+      if (packState.content === 'joker' && state.jokers.length >= maxJokers()) blocked = true;
+      if ((packState.content === 'tarot' || packState.content === 'spectral') && !hasConsumRoom()) blocked = true;
+    }
+    if (it.picked || blocked) div.classList.add(it.picked ? 'picked' : 'disabled');
+    else div.addEventListener('click', () => pickFromPack(i));
+    el.packModalCards.appendChild(div);
+  });
+}
+
+function pickFromPack(i) {
+  const it = packState.items[i];
+  if (it.picked || packState.picksLeft <= 0) return;
+  const content = packState.content;
+  if (content === 'joker') {
+    if (state.jokers.length >= maxJokers()) return;
+    state.jokers.push(makeJoker(it.data));
+    toast(`${it.data.name} 획득!`);
+  } else if (content === 'planet') {
+    const type = HAND_TYPES[it.data.key];
+    levelUpHand(type.levelKey);
+    state.planetsUsed++;
+    state.planetsUniq.add(it.data.id);
+    state.lastConsumable = { kind: 'planet', def: it.data };
+    toast(`${it.data.name}: ${type.name} Lv.${handLevel(type)}!`);
+  } else if (content === 'tarot' || content === 'spectral') {
+    if (!addConsumable({ kind: content, def: it.data })) return;
+    toast(`${it.data.name} 획득!`);
+  } else { // card
+    state.fullDeck.push(it.data);
+    toast(`${it.data.rank}${it.data.sym} 덱에 추가!`);
+  }
+  it.picked = true;
+  packState.picksLeft--;
+  sfx.select();
+  if (packState.picksLeft <= 0) closePack();
+  else renderPackModal();
+}
+
+function closePack() {
+  packState = null;
+  el.packModal.classList.remove('show');
   renderShop();
 }
 
@@ -2317,6 +2862,7 @@ el.rerollBtn.addEventListener('click', rerollShop);
 el.deckBtn.addEventListener('click', () => { renderDeckModal(); el.deckModal.classList.add('show'); });
 el.deckCloseBtn.addEventListener('click', () => el.deckModal.classList.remove('show'));
 el.deckModal.addEventListener('click', e => { if (e.target === el.deckModal) el.deckModal.classList.remove('show'); });
+el.packSkipBtn.addEventListener('click', closePack);
 el.endlessBtn.addEventListener('click', () => { state.endless = true; beep(660, 0.08); openShop(); });
 el.victoryNewBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
 </script>
