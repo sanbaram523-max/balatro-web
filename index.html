@@ -1060,7 +1060,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 </div>
 
 <div id="blindSelectScreen" class="screen">
-  <div class="title-big" style="font-size:42px;">Blind Select</div>
+  <div class="title-big" style="font-size:42px;">블라인드 선택</div>
   <div class="subtitle" id="blindSelectSub">Choose a blind or skip for a tag reward.</div>
   <div id="activeTags" class="tag-strip"></div>
   <div id="blindChoices" class="blind-select-wrap"></div>
@@ -2143,22 +2143,22 @@ const BOSS_BLINDS = [
 ];
 
 const TAGS = [
-  { id: 'uncommon', name: 'Uncommon Tag', icon: '◇', desc: 'Next shop has a free uncommon Joker.', apply() { addShopCoupon('joker', 'uncommon'); } },
-  { id: 'rare', name: 'Rare Tag', icon: '◆', desc: 'Next shop has a free rare Joker.', apply() { addShopCoupon('joker', 'rare'); } },
-  { id: 'foil', name: 'Foil Tag', icon: '▣', desc: 'Next shop has a free Foil Joker.', apply() { addShopCoupon('jokerEdition', 'foil'); } },
-  { id: 'holo', name: 'Holographic Tag', icon: '▤', desc: 'Next shop has a free Holographic Joker.', apply() { addShopCoupon('jokerEdition', 'holographic'); } },
-  { id: 'poly', name: 'Polychrome Tag', icon: '▥', desc: 'Next shop has a free Polychrome Joker.', apply() { addShopCoupon('jokerEdition', 'polychrome'); } },
-  { id: 'investment', name: 'Investment Tag', icon: '$', desc: 'Gain $25 immediately.', apply() { state.gold += 25; toast('Investment Tag: +$25'); } },
-  { id: 'economy', name: 'Economy Tag', icon: '$$', desc: 'Double money, max +$40.', apply() { const gain = Math.min(40, Math.max(0, state.gold)); state.gold += gain; toast(`Economy Tag: +$${gain}`); } },
-  { id: 'orbital', name: 'Orbital Tag', icon: '◎', desc: 'Upgrade a random played hand by 3 levels.', apply() { applyOrbitalTag(); } },
-  { id: 'standard', name: 'Standard Tag', icon: '🂠', desc: 'Open a free Mega Standard Pack.', apply() { openFreePack('standard', 'Mega ', 5, 2); } },
-  { id: 'charm', name: 'Charm Tag', icon: '✦', desc: 'Open a free Mega Arcana Pack.', apply() { openFreePack('arcana', 'Mega ', 5, 2); } },
-  { id: 'meteor', name: 'Meteor Tag', icon: '☄', desc: 'Open a free Mega Celestial Pack.', apply() { openFreePack('celestial', 'Mega ', 5, 2); } },
-  { id: 'buffoon', name: 'Buffoon Tag', icon: '☻', desc: 'Open a free Mega Buffoon Pack.', apply() { openFreePack('buffoon', 'Mega ', 4, 2); } },
-  { id: 'ethereal', name: 'Ethereal Tag', icon: '◌', desc: 'Open a free Spectral Pack.', apply() { openFreePack('spectral', '', 2, 1); } },
-  { id: 'coupon', name: 'Coupon Tag', icon: '%', desc: 'Next shop first buy slot is free.', apply() { state.shopFreeItems = (state.shopFreeItems || 0) + 1; } },
-  { id: 'double', name: 'Double Tag', icon: '×2', desc: 'Copy the next tag reward.', apply() { state.doubleTagNext = true; toast('Double Tag primed'); } },
-  { id: 'speed', name: 'Speed Tag', icon: '»', desc: 'Next shop rerolls start free.', apply() { state.freeRerollsNextShop = (state.freeRerollsNextShop || 0) + 2; } },
+  { id: 'uncommon', name: '희귀 태그', icon: '◇', desc: '다음 상점에 무료 희귀 조커가 나타납니다.', apply() { addShopCoupon('joker', 'uncommon'); } },
+  { id: 'rare', name: '레어 태그', icon: '◆', desc: '다음 상점에 무료 레어 조커가 나타납니다.', apply() { addShopCoupon('joker', 'rare'); } },
+  { id: 'foil', name: '포일 태그', icon: '▣', desc: '다음 상점에 무료 포일 조커가 나타납니다.', apply() { addShopCoupon('jokerEdition', 'foil'); } },
+  { id: 'holo', name: '홀로그래픽 태그', icon: '▤', desc: '다음 상점에 무료 홀로그래픽 조커가 나타납니다.', apply() { addShopCoupon('jokerEdition', 'holographic'); } },
+  { id: 'poly', name: '폴리크롬 태그', icon: '▥', desc: '다음 상점에 무료 폴리크롬 조커가 나타납니다.', apply() { addShopCoupon('jokerEdition', 'polychrome'); } },
+  { id: 'investment', name: '투자 태그', icon: '$', desc: '즉시 $25를 획득합니다.', apply() { state.gold += 25; toast('투자 태그: +$25'); } },
+  { id: 'economy', name: '경제 태그', icon: '$$', desc: '돈을 2배로 (최대 +$40).', apply() { const gain = Math.min(40, Math.max(0, state.gold)); state.gold += gain; toast(`경제 태그: +$${gain}`); } },
+  { id: 'orbital', name: '궤도 태그', icon: '◎', desc: '무작위 족보를 3레벨 올립니다.', apply() { applyOrbitalTag(); } },
+  { id: 'standard', name: '표준 태그', icon: '🂠', desc: '무료 메가 스탠다드 팩을 개봉합니다.', apply() { openFreePack('standard', '메가 ', 5, 2); } },
+  { id: 'charm', name: '부적 태그', icon: '✦', desc: '무료 메가 아르카나 팩을 개봉합니다.', apply() { openFreePack('arcana', '메가 ', 5, 2); } },
+  { id: 'meteor', name: '유성 태그', icon: '☄', desc: '무료 메가 천체 팩을 개봉합니다.', apply() { openFreePack('celestial', '메가 ', 5, 2); } },
+  { id: 'buffoon', name: '어릿광대 태그', icon: '☻', desc: '무료 메가 어릿광대 팩을 개봉합니다.', apply() { openFreePack('buffoon', '메가 ', 4, 2); } },
+  { id: 'ethereal', name: '무형 태그', icon: '◌', desc: '무료 스펙트럴 팩을 개봉합니다.', apply() { openFreePack('spectral', '', 2, 1); } },
+  { id: 'coupon', name: '쿠폰 태그', icon: '%', desc: '다음 상점의 첫 구매가 무료가 됩니다.', apply() { state.shopFreeItems = (state.shopFreeItems || 0) + 1; } },
+  { id: 'double', name: '더블 태그', icon: '×2', desc: '다음에 받는 태그를 복제합니다.', apply() { state.doubleTagNext = true; toast('더블 태그 대기 중!'); } },
+  { id: 'speed', name: '속도 태그', icon: '»', desc: '다음 상점의 리롤이 무료로 시작합니다.', apply() { state.freeRerollsNextShop = (state.freeRerollsNextShop || 0) + 2; } },
 ];
 
 const HEROES = [
@@ -2486,10 +2486,10 @@ function addShopCoupon(type, value) {
 
 function activeTagSummary() {
   const bits = [];
-  if (state.shopCoupons.length) bits.push(`${state.shopCoupons.length} shop reward`);
-  if (state.shopFreeItems) bits.push(`${state.shopFreeItems} free item`);
-  if (state.freeRerollsNextShop) bits.push(`${state.freeRerollsNextShop} free reroll`);
-  if (state.doubleTagNext) bits.push('double next tag');
+  if (state.shopCoupons.length) bits.push(`무료 조커 ${state.shopCoupons.length}개`);
+  if (state.shopFreeItems) bits.push(`무료 구매 ${state.shopFreeItems}회`);
+  if (state.freeRerollsNextShop) bits.push(`무료 리롤 ${state.freeRerollsNextShop}회`);
+  if (state.doubleTagNext) bits.push('다음 태그 2배');
   return bits;
 }
 
@@ -2497,7 +2497,7 @@ function applyOrbitalTag() {
   const keys = Object.keys(state.handTypeCounts || {});
   const key = keys.length ? keys[Math.floor(Math.random() * keys.length)] : 'HIGH_CARD';
   levelUpHand(key, 3);
-  toast(`Orbital Tag: ${HAND_TYPES[Object.keys(HAND_TYPES).find(k => HAND_TYPES[k].levelKey === key)]?.name || key} +3`);
+  toast(`궤도 태그: ${HAND_TYPES[Object.keys(HAND_TYPES).find(k => HAND_TYPES[k].levelKey === key)]?.name || key} +3레벨`);
 }
 
 function openFreePack(kindId, size, show, pick) {
@@ -2513,11 +2513,11 @@ function prepareBlindSelect() {
 }
 
 function renderBlindSelect() {
-  el.blindSelectSub.textContent = `Ante ${state.ante} · choose the next blind`;
+  el.blindSelectSub.textContent = `앤티 ${state.ante} · 다음 블라인드를 선택하세요`;
   const active = activeTagSummary();
   el.activeTags.innerHTML = active.length
-    ? `<b>Pending tag rewards:</b> ${active.join(' · ')}`
-    : '<b>Skip tags:</b> Small/Big blinds can be skipped for a reward. Boss blinds must be played.';
+    ? `<b>대기 중인 태그 보상:</b> ${active.join(' · ')}`
+    : '<b>스킵 태그:</b> 스몰/빅 블라인드는 스킵하고 태그 보상을 받을 수 있습니다. 보스 블라인드는 반드시 플레이해야 합니다.';
   el.blindChoices.innerHTML = '';
   for (let i = 0; i < 3; i++) {
     const isCurrent = i === state.blindIdx;
@@ -2527,33 +2527,33 @@ function renderBlindSelect() {
     const card = document.createElement('div');
     card.className = 'blind-choice' + (isCurrent ? ' current' : '') + (locked && !isCurrent ? ' locked' : '');
     const desc = i === 2
-      ? (state.boss && isCurrent ? `${state.boss.name}: ${state.boss.desc}` : 'Defeat the boss to advance the ante.')
-      : 'Play for gold, or skip for the tag below.';
+      ? (state.boss && isCurrent ? `${state.boss.name}: ${state.boss.desc}` : '보스를 격파하면 다음 앤티로 진행합니다.')
+      : '플레이하면 골드를, 스킵하면 아래 태그를 받습니다.';
     card.innerHTML =
       `<div class="bc-icon">${BLIND_ICONS[i]}</div>` +
       `<div class="bc-name">${BLIND_NAMES[i]}</div>` +
-      `<div class="bc-target">${blindTarget(state.ante, i).toLocaleString()} score</div>` +
+      `<div class="bc-target">목표 ${blindTarget(state.ante, i).toLocaleString()}점</div>` +
       `<div class="bc-desc">${desc}</div>` +
-      (tag ? tagChipHTML(tag) : '<div class="tag-chip"><div class="tag-icon">♛</div><div><div class="tag-name">Boss Blind</div><div class="tag-desc">No skip reward.</div></div></div>');
+      (tag ? tagChipHTML(tag) : '<div class="tag-chip"><div class="tag-icon">♛</div><div><div class="tag-name">보스 블라인드</div><div class="tag-desc">스킵 보상이 없습니다.</div></div></div>');
     const actions = document.createElement('div');
     actions.className = 'bc-actions' + (i === 2 ? ' single' : '');
     if (isCurrent) {
       const play = document.createElement('button');
       play.className = 'btn-primary';
-      play.textContent = 'Play Blind';
+      play.textContent = '플레이';
       play.addEventListener('click', playSelectedBlind);
       actions.appendChild(play);
       if (i < 2) {
         const skip = document.createElement('button');
         skip.className = 'btn-blue';
-        skip.textContent = 'Skip for Tag';
+        skip.textContent = '스킵하고 태그 받기';
         skip.addEventListener('click', skipSelectedBlind);
         actions.appendChild(skip);
       }
     } else {
       const note = document.createElement('button');
       note.disabled = true;
-      note.textContent = skipped ? 'Skipped' : (i < state.blindIdx ? 'Cleared' : 'Locked');
+      note.textContent = skipped ? '스킵함' : (i < state.blindIdx ? '클리어' : '잠김');
       actions.classList.add('single');
       actions.appendChild(note);
     }
