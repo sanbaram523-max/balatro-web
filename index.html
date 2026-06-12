@@ -921,6 +921,73 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 #helpBody th { color: var(--gold); background: #00000030; }
 
+/* ---------- Hero select ---------- */
+#heroSelectScreen {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 18px;
+}
+.hero-select-wrap {
+  width: min(760px, 96vw);
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 18px;
+  align-items: stretch;
+  background: #00000035;
+  border: 1px solid #ffffff1f;
+  border-radius: 12px;
+  padding: 18px;
+}
+.hero-portrait {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center 42%;
+  border-radius: 10px;
+  border: 3px solid #8f1f2b;
+  box-shadow: 0 0 0 3px #1a0a0d, 0 18px 30px #0009;
+}
+.hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+}
+.hero-kicker {
+  color: #ff7382;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hero-name {
+  font-size: clamp(26px, 4vw, 46px);
+  font-weight: 1000;
+  color: #fff;
+  line-height: 1.05;
+}
+.hero-title {
+  color: var(--gold);
+  font-size: 19px;
+  font-weight: 900;
+}
+.hero-skill {
+  background: linear-gradient(160deg, #361019, #12070a);
+  border: 1px solid #ff667733;
+  border-radius: 8px;
+  padding: 12px;
+  color: #ffd9de;
+  line-height: 1.55;
+  font-size: 15px;
+}
+.hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.hero-actions button { font-size: 14px; }
+
 /* ---------- 모바일 반응형 ---------- */
 @media (max-width: 640px) {
   :root { --card-w: 44px; --card-h: 66px; }
@@ -945,6 +1012,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   #shopItems { gap: 12px; }
   .blind-select-wrap { grid-template-columns: 1fr; }
   .blind-choice { min-height: 190px; }
+  .hero-select-wrap { grid-template-columns: 1fr; padding: 14px; }
+  .hero-portrait { max-height: 360px; }
 }
 </style>
 </head>
@@ -967,6 +1036,28 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 <!-- ===================== 게임 화면 ===================== -->
 <!-- ===================== Blind select / skip tags ===================== -->
+<!-- ===================== Hero select ===================== -->
+<div id="heroSelectScreen" class="screen">
+  <div class="title-big" style="font-size:42px;">영웅 선택</div>
+  <div class="subtitle">이번 런을 이끌 시작영웅을 선택하세요.</div>
+  <div class="hero-select-wrap">
+    <img class="hero-portrait" src="assets/hero-kim-daehyun.jpg" alt="김대현">
+    <div class="hero-info">
+      <div class="hero-kicker">악마술사</div>
+      <div class="hero-name">김대현</div>
+      <div class="hero-title">The 악마 슬레이어</div>
+      <div class="hero-skill">
+        악마술사는 패배하지 않습니다.<br>
+        모든 블라인드의 목표점수가 90% 줄어듭니다.
+      </div>
+      <div class="hero-actions">
+        <button id="heroStartBtn" class="btn-primary">김대현으로 시작</button>
+        <button id="heroBackBtn" class="btn-blue">뒤로</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="blindSelectScreen" class="screen">
   <div class="title-big" style="font-size:42px;">Blind Select</div>
   <div class="subtitle" id="blindSelectSub">Choose a blind or skip for a tag reward.</div>
@@ -2028,6 +2119,7 @@ function blindTarget(ante, blindIdx) {
     : ANTE_BASE[ANTE_BASE.length - 1] * Math.pow(10, ante - ANTE_BASE.length);
   let mult = [1, 1.5, 2][blindIdx];
   if (blindIdx === 2 && state && state.boss && state.boss.targetMult) mult *= state.boss.targetMult;
+  if (state && state.hero && state.hero.targetMult) mult *= state.hero.targetMult;
   return Math.round(base * mult);
 }
 const BLIND_NAMES = ['스몰 블라인드', '빅 블라인드', '보스 블라인드'];
@@ -2067,6 +2159,19 @@ const TAGS = [
   { id: 'double', name: 'Double Tag', icon: '×2', desc: 'Copy the next tag reward.', apply() { state.doubleTagNext = true; toast('Double Tag primed'); } },
   { id: 'speed', name: 'Speed Tag', icon: '»', desc: 'Next shop rerolls start free.', apply() { state.freeRerollsNextShop = (state.freeRerollsNextShop || 0) + 2; } },
 ];
+
+const HEROES = [
+  {
+    id: 'kim_daehyun',
+    name: '김대현',
+    title: '악마술사 The 악마 슬레이어',
+    image: 'assets/hero-kim-daehyun.jpg',
+    desc: '악마술사는 패배하지 않습니다. 모든 블라인드의 목표점수가 90% 줄어듭니다.',
+    targetMult: 0.1,
+    noDefeat: true,
+  },
+];
+let pendingTutorialStart = false;
 
 function isDebuffed(card) {
   return !!(state && state.boss && state.boss.debuffSuit === card.suit);
@@ -2261,10 +2366,11 @@ function scoreHand(cards) {
    ============================================================ */
 let state = null;
 
-function newGame() {
+function newGame(hero = HEROES[0]) {
   state = {
     ante: 1,
     blindIdx: 0,           // 0=스몰, 1=빅, 2=보스
+    hero,
     gold: 4,
     jokers: [],
     bestScore: 0,
@@ -2521,7 +2627,7 @@ const sfx = {
    ui — DOM 렌더링 (Milestone 1, 3, 5, 6)
    ============================================================ */
 const el = {};
-['startScreen', 'blindSelectScreen', 'gameScreen', 'shopScreen', 'gameoverScreen', 'clearBanner',
+['startScreen', 'heroSelectScreen', 'blindSelectScreen', 'gameScreen', 'shopScreen', 'gameoverScreen', 'clearBanner',
  'victoryStats', 'endlessBtn', 'victoryNewBtn',
  'blindSelectSub', 'activeTags', 'blindChoices',
  'blindBox', 'blindBadge', 'blindName', 'blindDesc', 'progressFill', 'progressText',
@@ -2529,7 +2635,7 @@ const el = {};
  'jokerArea', 'playedCards', 'handResult', 'handArea', 'deckCount', 'deckCountText',
  'consumArea', 'shopConsums', 'toast', 'jtip', 'deckBtn', 'deckModal', 'deckModalInner',
  'deckModalBody', 'deckModalCount', 'deckCloseBtn',
- 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'tutorialBtn', 'startHelpBtn', 'retryBtn',
+ 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'tutorialBtn', 'startHelpBtn', 'heroStartBtn', 'heroBackBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
  'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
  'packModalCards', 'packTargetPanel', 'packTargetTitle', 'packTargetHint', 'packTargetCards',
@@ -2653,8 +2759,15 @@ let helpTab = 'basic';
 
 function startNewGame(withTutorial = false) {
   beep(660, 0.08);
-  newGame();
-  if (withTutorial) startTutorial();
+  pendingTutorialStart = withTutorial;
+  stopTutorial();
+  showScreen('heroSelectScreen');
+}
+
+function startHeroGame(hero = HEROES[0]) {
+  beep(660, 0.08);
+  newGame(hero);
+  if (pendingTutorialStart) startTutorial();
   else stopTutorial();
 }
 
@@ -3214,6 +3327,11 @@ function advanceBlind() {
 }
 
 function gameOver() {
+  if (state.hero && state.hero.noDefeat) {
+    toast(`${state.hero.name}: 악마술사는 패배하지 않습니다.`);
+    roundClear();
+    return;
+  }
   // 미스터 본즈: 목표의 25% 이상이면 살아남는다 (자신 파괴, 라운드 클리어 처리)
   const bones = state.jokers.find(j => j.id === 'mr_bones');
   if (bones && state.roundScore >= currentTarget() * 0.25) {
@@ -3785,6 +3903,8 @@ function sellJoker(jokerIdx) {
 el.newGameBtn.addEventListener('click', () => startNewGame(false));
 el.tutorialBtn.addEventListener('click', () => startNewGame(true));
 el.startHelpBtn.addEventListener('click', () => openHelp('basic'));
+el.heroStartBtn.addEventListener('click', () => startHeroGame(HEROES[0]));
+el.heroBackBtn.addEventListener('click', () => showScreen('startScreen'));
 el.retryBtn.addEventListener('click', () => startNewGame(false));
 el.playBtn.addEventListener('click', playHand);
 el.discardBtn.addEventListener('click', discardCards);
