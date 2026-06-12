@@ -385,50 +385,123 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 #deckCount { font-size: 12px; opacity: 0.6; text-align: center; padding-bottom: 10px; }
 
-/* ---------- 상점 ---------- */
-#shopScreen { align-items: center; justify-content: center; gap: 20px; padding: 20px; }
-#shopScreen h2 { color: var(--gold); font-size: 36px; text-shadow: 3px 3px 0 #00000066; }
-#shopGold { font-size: 20px; }
-#shopGold b { color: var(--gold); }
-#shopItems { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-.shop-item {
-  background: var(--panel);
-  border-radius: 14px;
-  padding: 14px;
-  width: 180px;
+/* ---------- 상점 (원작 스타일 컴팩트 레이아웃) ---------- */
+#shopScreen { align-items: center; justify-content: flex-start; gap: 10px; padding: 12px; }
+#shopTopStrip {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-}
-.shop-item .joker-card { width: 100%; }
-.shop-item.sold-out { opacity: 0.35; }
-.buy-btn {
-  background: var(--gold);
-  color: #222;
-  padding: 8px 22px;
-  font-size: 15px;
-  width: 100%;
-}
-#ownedJokers {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
+  gap: 14px;
+  align-items: stretch;
   background: #00000033;
   border-radius: 12px;
-  padding: 12px;
-  min-height: 100px;
-  max-width: 700px;
+  padding: 8px 14px;
+  width: 100%;
+  max-width: 960px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.strip-section { display: flex; gap: 8px; align-items: center; }
+.strip-label {
+  writing-mode: vertical-rl;
+  font-size: 10px;
+  opacity: 0.55;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.strip-row { display: flex; gap: 8px; align-items: center; }
+.strip-divider { width: 2px; background: #ffffff18; border-radius: 1px; flex-shrink: 0; }
+#shopHeader {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+  display: flex;
+  gap: 20px;
+  align-items: baseline;
+  text-shadow: 2px 2px 0 #00000066;
+}
+#shopHeader span { font-size: 15px; color: var(--text); }
+#shopHeader b { color: var(--gold); }
+#shopPanel {
+  background: #141d28;
+  border: 2px solid #e0525288;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  max-width: 840px;
+}
+#shopBtnCol { display: flex; flex-direction: column; gap: 10px; width: 128px; flex-shrink: 0; }
+#nextRoundBtn {
+  background: var(--red);
+  color: #fff;
+  font-size: 16px;
+  padding: 20px 8px;
+  box-shadow: 0 4px 0 #a03030;
+  flex: 1;
+  line-height: 1.4;
+}
+#rerollBtn {
+  background: #2e9e58;
+  color: #fff;
+  font-size: 14px;
+  padding: 16px 8px;
+  box-shadow: 0 4px 0 #1d6e3c;
+}
+#shopMain { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+#shopItems {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-end;
+  background: #00000044;
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  min-height: 132px;
+}
+.slot-item { text-align: center; cursor: pointer; transition: transform 0.12s; }
+.slot-item:hover { transform: translateY(-4px); }
+.slot-item.sold, .slot-item.blocked { opacity: 0.4; cursor: default; }
+.slot-item.sold:hover, .slot-item.blocked:hover { transform: none; }
+.price-badge {
+  display: inline-block;
+  background: var(--gold);
+  color: #222;
+  font-weight: 800;
+  border-radius: 8px;
+  padding: 2px 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  box-shadow: 0 2px 0 #00000066;
+}
+.price-badge.cant { background: #b04040; color: #fff; }
+#shopBottomRow { display: flex; gap: 12px; }
+#voucherBox, #packBox {
+  background: #00000044;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 110px;
+}
+.v-side-label {
+  writing-mode: vertical-rl;
+  font-size: 10px;
+  opacity: 0.5;
+  letter-spacing: 2px;
+  flex-shrink: 0;
 }
 .sell-btn {
   background: #777;
   color: #fff;
   font-size: 10px;
   padding: 3px 8px;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 .shop-note { font-size: 13px; opacity: 0.6; }
+#ownedJokers .joker-card { width: 104px; height: 76px; }
 
 /* ---------- 라운드 클리어 배너 ---------- */
 #clearBanner {
@@ -652,6 +725,12 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   #playBtn, #discardBtn { font-size: 15px; padding: 12px 22px; }
   #handArea { gap: 3px; }
   .title-big { letter-spacing: 1px; }
+  /* 상점: 버튼 열이 위로 올라와 가로 배치 */
+  #shopPanel { flex-direction: column; }
+  #shopBtnCol { flex-direction: row; width: 100%; }
+  #nextRoundBtn { padding: 12px 8px; }
+  #shopBottomRow { flex-direction: column; }
+  #shopItems { gap: 12px; }
 }
 </style>
 </head>
@@ -718,25 +797,42 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 <!-- ===================== 상점 화면 ===================== -->
 <div id="shopScreen" class="screen">
-  <h2>🛒 상점</h2>
-  <div id="shopGold">보유 골드: <b>0</b>G</div>
-  <div id="shopItems"></div>
-  <button id="rerollBtn" class="btn-blue" style="font-size:14px; padding:8px 22px;">🎲 새로고침 $5</button>
-  <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:flex-start;">
-    <div style="text-align:center;">
-      <div class="shop-note" style="margin-bottom:6px;">📦 부스터 팩</div>
-      <div id="shopPacks" style="display:flex; gap:12px;"></div>
+  <!-- 최상단: 보유 조커 + 소모품 스트립 -->
+  <div id="shopTopStrip">
+    <div class="strip-section">
+      <span class="strip-label" id="ownedJokersLabel">조커 0/5</span>
+      <div id="ownedJokers" class="strip-row"></div>
     </div>
-    <div style="text-align:center;">
-      <div class="shop-note" style="margin-bottom:6px;">🎟️ 바우처 (앤티당 1개)</div>
-      <div id="shopVoucher" style="display:flex; gap:12px;"></div>
+    <div class="strip-divider"></div>
+    <div class="strip-section">
+      <span class="strip-label" id="shopConsumsLabel">소모품 0/2</span>
+      <div id="shopConsums" class="strip-row"></div>
     </div>
   </div>
-  <div class="shop-note">보유 조커 (최대 5개) — 판매하면 판매가를 돌려받습니다</div>
-  <div id="ownedJokers"></div>
-  <div class="shop-note">보유 소모품 — 여기서도 사용할 수 있습니다 (카드 선택이 필요한 타로는 게임 화면에서)</div>
-  <div id="shopConsums" class="consum-area" style="min-width:340px; justify-content:center;"></div>
-  <button id="nextRoundBtn" class="btn-blue">다음 라운드 ▶</button>
+
+  <!-- 슬림 헤더 -->
+  <div id="shopHeader">🛒 상점 <span id="shopGold"></span><span id="shopAnte"></span></div>
+
+  <!-- 메인 패널: 왼쪽 버튼 열 + 오른쪽 2행 -->
+  <div id="shopPanel">
+    <div id="shopBtnCol">
+      <button id="nextRoundBtn">다음<br>라운드 ▶</button>
+      <button id="rerollBtn">🎲 리롤 $5</button>
+    </div>
+    <div id="shopMain">
+      <div id="shopItems"></div>
+      <div id="shopBottomRow">
+        <div id="voucherBox">
+          <span class="v-side-label" id="voucherLabel">앤티 바우처</span>
+          <div id="shopVoucher"></div>
+        </div>
+        <div id="packBox">
+          <span class="v-side-label">부스터 팩</span>
+          <div id="shopPacks"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ===================== 승리 화면 ===================== -->
@@ -1210,7 +1306,7 @@ function randPack() {
 const VOUCHER_COST = 10;
 function hasVoucher(id) { return !!(state && state.vouchers.has(id)); }
 const VOUCHERS = [
-  { id: 'overstock',      name: '재고 과잉',   icon: '🛒', desc: '상점 조커 슬롯 +1 (2→3)' },
+  { id: 'overstock',      name: '재고 과잉',   icon: '🛒', desc: '상점 구매 슬롯 +1 (2→3)' },
   { id: 'clearance',      name: '정리 세일',   icon: '🏷️', desc: '상점 카드·팩 25% 할인' },
   { id: 'hone',           name: '연마',        icon: '✨', desc: '에디션 조커 2배 등장' },
   { id: 'reroll_surplus', name: '리롤 잉여',   icon: '🎲', desc: '새로고침 비용 $2 할인' },
@@ -2012,7 +2108,7 @@ const el = {};
  'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
  'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
- 'packModalCards', 'packSkipBtn',
+ 'packModalCards', 'packSkipBtn', 'shopAnte', 'ownedJokersLabel', 'shopConsumsLabel', 'voucherLabel',
  'clearReward', 'toShopBtn', 'gameoverStats',
 ].forEach(id => { el[id] = document.getElementById(id); });
 
@@ -2559,21 +2655,24 @@ function rollJokerEdition() {
 const ED_PRICE = { foil: 2, holographic: 3, polychrome: 5 };
 
 function stockShop() {
+  // 구매 슬롯 2칸 ('재고 과잉' 바우처면 3칸) — 원작 가중치: 조커 20 / 타로 4 / 행성 4
   const exclude = new Set(state.jokers.map(j => j.id));
   shopStock = [];
-  const jokerSlots = hasVoucher('overstock') ? 3 : 2; // '재고 과잉' 바우처
-  for (let i = 0; i < jokerSlots; i++) {
-    const j = randomShopJoker(exclude);
-    if (j) {
-      exclude.add(j.id);
-      shopStock.push({ kind: 'joker', joker: j, edition: rollJokerEdition(), sold: false });
+  const slots = hasVoucher('overstock') ? 3 : 2;
+  const jw = 20;
+  const tw = 4 * (hasVoucher('tarot_merchant') ? 2 : 1);
+  const pw = 4 * (hasVoucher('planet_merchant') ? 2 : 1);
+  for (let i = 0; i < slots; i++) {
+    const r = Math.random() * (jw + tw + pw);
+    if (r < jw) {
+      const j = randomShopJoker(exclude);
+      if (j) {
+        exclude.add(j.id);
+        shopStock.push({ kind: 'joker', joker: j, edition: rollJokerEdition(), sold: false });
+        continue;
+      }
     }
-  }
-  // 소모품 2칸: 타로/행성 (상인 바우처가 가중치 2배)
-  const tw = hasVoucher('tarot_merchant') ? 2 : 1;
-  const pw = hasVoucher('planet_merchant') ? 2 : 1;
-  for (let i = 0; i < 2; i++) {
-    shopStock.push(Math.random() < tw / (tw + pw)
+    shopStock.push(r < jw + tw
       ? { kind: 'consum', c: { kind: 'tarot', def: randTarot() }, sold: false }
       : { kind: 'consum', c: { kind: 'planet', def: randPlanet() }, sold: false });
   }
@@ -2639,106 +2738,120 @@ function openShop() {
 
 
 function renderShop() {
-  el.shopGold.innerHTML = `보유 골드: <b>${state.gold}</b>G`;
+  el.shopGold.innerHTML = `💰 <b>${state.gold}</b>G`;
+  el.shopAnte.textContent = `앤티 ${state.ante}`;
 
+  // 구매 슬롯: 가격 배지 + 카드 클릭으로 구매
   el.shopItems.innerHTML = '';
-  if (shopStock.length === 0) {
-    el.shopItems.innerHTML = '<div class="shop-note">진열할 조커가 없습니다 (전부 보유 중!)</div>';
-  }
   shopStock.forEach((item, i) => {
     const wrap = document.createElement('div');
-    wrap.className = 'shop-item' + (item.sold ? ' sold-out' : '');
+    wrap.className = 'slot-item';
     const cost = shopItemPrice(item);
-    if (item.kind === 'joker') {
-      const card = jokerCardEl(Object.assign({}, item.joker, { edition: item.edition }));
-      wrap.appendChild(card);
-    } else {
-      wrap.appendChild(consumEl(item.c));
-    }
-    const btn = document.createElement('button');
-    btn.className = 'buy-btn';
+    const badge = document.createElement('div');
+    badge.className = 'price-badge';
     if (item.sold) {
-      btn.textContent = '판매 완료';
-      btn.disabled = true;
+      badge.textContent = '판매됨';
+      wrap.classList.add('sold');
     } else {
-      btn.textContent = cost === 0 ? '무료!' : `구매 ${cost}G`;
-      btn.disabled = !canAfford(cost) ||
+      badge.textContent = cost === 0 ? '무료' : `$${cost}`;
+      const blocked = !canAfford(cost) ||
         (item.kind === 'joker' && state.jokers.length >= maxJokers()) ||
         (item.kind === 'consum' && !hasConsumRoom());
-      if (item.kind === 'consum' && !hasConsumRoom()) btn.textContent = '슬롯 가득 참';
-      btn.addEventListener('click', () => buyItem(i));
+      if (blocked) {
+        badge.classList.add('cant');
+        wrap.classList.add('blocked');
+      } else {
+        wrap.addEventListener('click', () => buyItem(i));
+      }
     }
-    wrap.appendChild(btn);
+    wrap.appendChild(badge);
+    wrap.appendChild(document.createElement('br'));
+    const cardDiv = item.kind === 'joker'
+      ? jokerCardEl(Object.assign({}, item.joker, { edition: item.edition }))
+      : consumEl(item.c);
+    wrap.appendChild(cardDiv);
     el.shopItems.appendChild(wrap);
   });
   renderConsumables();
 
-  // 새로고침 버튼
+  // 리롤 버튼 (구매 슬롯만 새로고침)
   const rc = rerollCostNow();
-  el.rerollBtn.textContent = rc === 0 ? '🎲 새로고침 (무료!)' : `🎲 새로고침 $${rc}`;
+  el.rerollBtn.textContent = rc === 0 ? '🎲 리롤 무료!' : `🎲 리롤 $${rc}`;
   el.rerollBtn.disabled = !canAfford(rc);
 
-  // 부스터 팩
+  // 부스터 팩: 가격 배지 + 클릭 개봉
   el.shopPacks.innerHTML = '';
   shopPacks.forEach((item, i) => {
     const k = PACK_KINDS[item.pack.kindId];
     const wrap = document.createElement('div');
-    wrap.className = 'shop-item' + (item.sold ? ' sold-out' : '');
-    wrap.style.width = 'auto';
+    wrap.className = 'slot-item';
+    const cost = packPrice(item.pack);
+    const badge = document.createElement('div');
+    badge.className = 'price-badge';
+    if (item.sold) {
+      badge.textContent = '개봉됨';
+      wrap.classList.add('sold');
+    } else if (!canAfford(cost)) {
+      badge.textContent = `$${cost}`;
+      badge.classList.add('cant');
+      wrap.classList.add('blocked');
+    } else {
+      badge.textContent = `$${cost}`;
+      wrap.addEventListener('click', () => buyPack(i));
+    }
     const card = document.createElement('div');
     card.className = 'pack-card ' + k.cls;
     card.innerHTML =
       `<div class="p-icon">${k.icon}</div>` +
       `<div class="p-name">${item.pack.size}${k.name}</div>` +
       `<div class="p-desc">${item.pack.show}장 중 ${item.pack.pick}장 선택</div>`;
+    wrap.appendChild(badge);
     wrap.appendChild(card);
-    const btn = document.createElement('button');
-    btn.className = 'buy-btn';
-    const cost = packPrice(item.pack);
-    if (item.sold) { btn.textContent = '개봉 완료'; btn.disabled = true; }
-    else {
-      btn.textContent = `개봉 ${cost}G`;
-      btn.disabled = !canAfford(cost);
-      btn.addEventListener('click', () => buyPack(i));
-    }
-    wrap.appendChild(btn);
     el.shopPacks.appendChild(wrap);
   });
 
-  // 바우처
+  // 바우처: 가격 배지 + 클릭 구매
+  el.voucherLabel.textContent = `앤티 ${state.ante} 바우처`;
   el.shopVoucher.innerHTML = '';
   if (state.anteVoucher && !state.anteVoucher.sold) {
     const v = state.anteVoucher.def;
     const wrap = document.createElement('div');
-    wrap.className = 'shop-item';
-    wrap.style.width = 'auto';
+    wrap.className = 'slot-item';
+    const badge = document.createElement('div');
+    badge.className = 'price-badge';
+    badge.textContent = `$${VOUCHER_COST}`;
+    if (!canAfford(VOUCHER_COST)) {
+      badge.classList.add('cant');
+      wrap.classList.add('blocked');
+    } else {
+      wrap.addEventListener('click', buyVoucher);
+    }
     const card = document.createElement('div');
     card.className = 'voucher-card';
-    card.innerHTML = `<div style="font-size:26px;">${v.icon}</div><div class="v-name">${v.name}</div><div class="v-desc">${v.desc}</div>`;
+    card.innerHTML = `<div style="font-size:24px;">${v.icon}</div><div class="v-name">${v.name}</div><div class="v-desc">${v.desc}</div>`;
+    wrap.appendChild(badge);
     wrap.appendChild(card);
-    const btn = document.createElement('button');
-    btn.className = 'buy-btn';
-    btn.textContent = `구매 ${VOUCHER_COST}G`;
-    btn.disabled = !canAfford(VOUCHER_COST);
-    btn.addEventListener('click', buyVoucher);
-    wrap.appendChild(btn);
     el.shopVoucher.appendChild(wrap);
   } else {
-    el.shopVoucher.innerHTML = `<div class="shop-note" style="padding:20px;">${state.anteVoucher ? '구매 완료 — 다음 앤티에 새 바우처' : '모든 바우처 보유!'}</div>`;
+    el.shopVoucher.innerHTML = `<div class="shop-note" style="padding:14px;">${state.anteVoucher ? '구매 완료' : '전부 보유!'}</div>`;
   }
-  // 보유 바우처 표시
+  // 보유 바우처 요약 (툴팁으로 전체 확인)
   if (state.vouchers.size) {
     const owned = document.createElement('div');
     owned.className = 'shop-note';
-    owned.style.maxWidth = '180px';
-    owned.textContent = '보유: ' + [...state.vouchers].map(id => VOUCHERS.find(v => v.id === id).name).join(', ');
+    owned.style.maxWidth = '150px';
+    owned.style.fontSize = '11px';
+    owned.textContent = `보유 ${state.vouchers.size}개`;
+    attachTip(owned, `<div class="t-name">🎟️ 보유 바우처</div><div>${[...state.vouchers].map(id => VOUCHERS.find(v => v.id === id).name).join(', ')}</div>`);
     el.shopVoucher.appendChild(owned);
   }
 
-  // 보유 조커 + 판매 버튼
+  // 최상단 스트립: 보유 조커 (+판매 버튼)
+  el.ownedJokersLabel.textContent = `조커 ${state.jokers.length}/${maxJokers()}`;
+  el.shopConsumsLabel.textContent = `소모품 ${state.consumables.length}/${state.consumableSlots}`;
   el.ownedJokers.innerHTML = '';
   if (state.jokers.length === 0) {
-    el.ownedJokers.innerHTML = '<div class="shop-note">아직 조커가 없습니다</div>';
+    el.ownedJokers.innerHTML = '<div class="shop-note" style="padding:10px;">아직 조커가 없습니다</div>';
   }
   state.jokers.forEach((j, i) => {
     const wrap = document.createElement('div');
