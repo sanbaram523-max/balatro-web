@@ -723,6 +723,34 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .consum-card.spectral { background: linear-gradient(145deg, #1d6e62, #0e3830); border-color: #4ac0ae; }
 .joker-card.ed-negative { filter: invert(0.85) hue-rotate(180deg); }
 
+/* ---------- 덱 선택 화면 ---------- */
+#deckSelectScreen { align-items: center; justify-content: center; gap: 18px; padding: 16px; }
+#deckGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 152px);
+  gap: 12px;
+  justify-content: center;
+}
+.deck-tile {
+  background: var(--panel);
+  border: 2px solid #ffffff22;
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+  min-height: 128px;
+}
+.deck-tile:hover { transform: translateY(-4px); border-color: var(--gold); }
+.deck-tile .d-icon { font-size: 28px; }
+.deck-tile .d-name { font-weight: 800; color: var(--gold); font-size: 13px; margin: 4px 0; }
+.deck-tile .d-desc { font-size: 10px; opacity: 0.85; line-height: 1.45; }
+.deck-tile .d-lock { font-size: 10px; color: #ff9e9e; margin-top: 6px; line-height: 1.4; }
+.deck-tile .d-wins { font-size: 10px; color: var(--blue); margin-top: 4px; }
+.deck-tile.locked { opacity: 0.45; cursor: default; filter: grayscale(0.6); }
+.deck-tile.locked:hover { transform: none; border-color: #ffffff22; }
+@media (max-width: 900px) { #deckGrid { grid-template-columns: repeat(3, minmax(105px, 1fr)); width: 100%; } }
+
 /* ---------- 토스트 메시지 ---------- */
 #toast {
   position: fixed;
@@ -1031,6 +1059,31 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   <div class="subtitle" style="font-size:13px; max-width:420px; line-height:1.7;">
     8장 중 최대 5장으로 포커 패를 만들어 점수를 모으세요.<br>
     조커를 사 모아 점점 높아지는 목표 점수를 버텨내세요!
+  </div>
+</div>
+
+<!-- ===================== 덱 선택 화면 ===================== -->
+<div id="deckSelectScreen" class="screen">
+  <div class="title-big" style="font-size:42px;">덱 선택</div>
+  <div class="subtitle" id="deckSelectSub"></div>
+  <div id="deckGrid"></div>
+  <div style="display:flex; gap:12px; justify-content:center;">
+    <button id="deckBackBtn" class="btn-blue" style="font-size:14px; padding:10px 24px;">뒤로</button>
+    <button id="saveCodeBtn" style="background:var(--panel-light); color:var(--text); font-size:14px; padding:10px 24px;">💾 저장 코드</button>
+  </div>
+</div>
+
+<!-- ===================== 저장 코드 모달 ===================== -->
+<div id="saveModal" style="position:fixed; inset:0; background:#000000cc; display:none; align-items:center; justify-content:center; z-index:300;">
+  <div style="background:var(--panel); border-radius:14px; padding:20px; max-width:520px; width:92%;">
+    <h3 style="color:var(--gold); margin-bottom:8px;">💾 저장 코드</h3>
+    <div class="shop-note" style="margin-bottom:8px;">아래 코드를 복사해두면 다른 기기/브라우저에서 붙여넣어 해금 상태를 옮길 수 있습니다.</div>
+    <textarea id="saveCodeArea" style="width:100%; height:90px; background:#00000055; color:var(--text); border:1px solid #ffffff33; border-radius:8px; padding:8px; font-size:11px; resize:none;"></textarea>
+    <div style="display:flex; gap:8px; margin-top:10px; justify-content:center;">
+      <button id="saveCopyBtn" class="btn-blue" style="font-size:13px; padding:8px 18px;">복사</button>
+      <button id="saveImportBtn" style="background:var(--gold); color:#222; font-size:13px; padding:8px 18px;">붙여넣은 코드 가져오기</button>
+      <button id="saveCloseBtn" style="background:#777; color:#fff; font-size:13px; padding:8px 18px;">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -1708,7 +1761,7 @@ function levelUpHand(levelKey, n = 1) {
   state.handLevels[levelKey] = (state.handLevels[levelKey] || 1) + n;
 }
 function jokerSum(field) { return state.jokers.reduce((s, j) => s + (j[field] || 0), 0); }
-function maxJokers() { return MAX_JOKERS + state.jokers.filter(j => j.edition === 'negative').length; }
+function maxJokers() { return MAX_JOKERS + state.jokers.filter(j => j.edition === 'negative').length + deckMod('jokerSlotMod'); }
 function destroyJoker(j) {
   const i = state.jokers.indexOf(j);
   if (i >= 0) state.jokers.splice(i, 1);
@@ -2121,6 +2174,7 @@ function blindTarget(ante, blindIdx) {
   let mult = [1, 1.5, 2][blindIdx];
   if (blindIdx === 2 && state && state.boss && state.boss.targetMult) mult *= state.boss.targetMult;
   if (state && state.hero && state.hero.targetMult) mult *= state.hero.targetMult;
+  if (deckIs('plasma')) mult *= 2; // 플라스마 덱: 목표 점수 2배
   return Math.round(base * mult);
 }
 const BLIND_NAMES = ['스몰 블라인드', '빅 블라인드', '보스 블라인드'];
@@ -2173,6 +2227,98 @@ const HEROES = [
   },
 ];
 let pendingTutorialStart = false;
+
+/* ============================================================
+   시작 덱 15종 + 해금 프로필 (localStorage)
+   ============================================================ */
+const DECKS = [
+  { id: 'red',       name: '붉은 덱',     icon: '🔴', desc: '라운드별 버리기 +1회', unlock: null, discardsMod: 1 },
+  { id: 'blue',      name: '파란 덱',     icon: '🔵', desc: '라운드별 패 내기 +1회', unlock: null, handsMod: 1 },
+  { id: 'yellow',    name: '노란 덱',     icon: '🟡', desc: '추가 $10를 갖고 시작', unlock: { wins: 1 } },
+  { id: 'green',     name: '초록 덱',     icon: '🟢', desc: '라운드 종료 시 남은 패 $2·버리기 $1, 이자 없음', unlock: { wins: 2 } },
+  { id: 'black',     name: '검은 덱',     icon: '⚫', desc: '조커 슬롯 +1, 패 내기 -1회', unlock: { wins: 3 }, jokerSlotMod: 1, handsMod: -1 },
+  { id: 'magic',     name: '마법 덱',     icon: '✨', desc: '수정 구슬 바우처와 광대 타로 2장으로 시작', unlock: { deckWin: 'red' } },
+  { id: 'nebula',    name: '성운 덱',     icon: '🌌', desc: '망원경 바우처로 시작, 소모품 슬롯 -1', unlock: { deckWin: 'blue' } },
+  { id: 'ghost',     name: '유령 덱',     icon: '👻', desc: '상점에 스펙트럴 카드 등장, 저주 1장으로 시작', unlock: { deckWin: 'yellow' } },
+  { id: 'abandoned', name: '버려진 덱',   icon: '🃏', desc: '그림 카드(J/Q/K) 없이 40장으로 시작', unlock: { deckWin: 'green' } },
+  { id: 'checkered', name: '체크무늬 덱', icon: '🏁', desc: '♠ 26장 + ♥ 26장으로 시작', unlock: { deckWin: 'black' } },
+  { id: 'zodiac',    name: '황도대 덱',   icon: '♈', desc: '타로 상인·행성 상인·재고 과잉 바우처로 시작', unlock: { wins: 4 } },
+  { id: 'painted',   name: '물감 덱',     icon: '🎨', desc: '손패 크기 +2장, 조커 슬롯 -1', unlock: { wins: 5 }, handSizeMod: 2, jokerSlotMod: -1 },
+  { id: 'anaglyph',  name: '입체 사진 덱', icon: '🥽', desc: '보스 블라인드 격파마다 더블 태그 획득', unlock: { wins: 6 } },
+  { id: 'plasma',    name: '플라스마 덱', icon: '⚡', desc: '칩과 배수의 균형을 맞춰 계산, 목표 점수 2배', unlock: { wins: 7 } },
+  { id: 'erratic',   name: '불규칙한 덱', icon: '🎲', desc: '덱의 모든 랭크·무늬가 무작위', unlock: { wins: 8 } },
+];
+
+const SAVE_KEY = 'webalatro_save_v1';
+function loadProfile() {
+  try {
+    const p = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (p && typeof p === 'object') return Object.assign({ totalWins: 0, deckWins: {}, bestAnte: 0 }, p);
+  } catch (e) { /* 손상된 저장 무시 */ }
+  return { totalWins: 0, deckWins: {}, bestAnte: 0 };
+}
+let profile = loadProfile();
+function saveProfile() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); } catch (e) { /* 저장 불가 환경 무시 */ }
+}
+function isDeckUnlocked(d) {
+  if (!d.unlock) return true;
+  if (d.unlock.wins) return profile.totalWins >= d.unlock.wins;
+  if (d.unlock.deckWin) return (profile.deckWins[d.unlock.deckWin] || 0) > 0;
+  return false;
+}
+function unlockText(d) {
+  if (d.unlock.wins) return `🔒 승리 ${d.unlock.wins}회 필요 (현재 ${profile.totalWins}회)`;
+  const src = DECKS.find(x => x.id === d.unlock.deckWin);
+  return `🔒 ${src.name}(으)로 승리 시 해금`;
+}
+// 저장 코드 내보내기/가져오기 (기기 간 이동용)
+function exportSave() {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(profile))));
+}
+function importSave(code) {
+  try {
+    const p = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if (typeof p.totalWins !== 'number' || typeof p.deckWins !== 'object') return false;
+    profile = Object.assign({ totalWins: 0, deckWins: {}, bestAnte: 0 }, p);
+    saveProfile();
+    return true;
+  } catch (e) { return false; }
+}
+function deckIs(id) { return !!(state && state.deckDef && state.deckDef.id === id); }
+function deckMod(field) { return (state && state.deckDef && state.deckDef[field]) || 0; }
+
+// 덱별 시작 카드 구성
+function buildStartingDeck(deckDef) {
+  if (deckDef.id === 'abandoned') {
+    return createDeck().filter(c => c.rank !== 'J' && c.rank !== 'Q' && c.rank !== 'K');
+  }
+  if (deckDef.id === 'checkered') {
+    const deck = [];
+    for (let copy = 0; copy < 2; copy++) {
+      for (const key of ['spade', 'heart']) {
+        const s = SUITS.find(x => x.key === key);
+        for (const r of RANKS) {
+          deck.push({ id: ++cardSeq, suit: s.key, sym: s.sym, rank: r.rank, value: r.value, chips: r.chips,
+                      enhancement: null, edition: null, seal: null });
+        }
+      }
+    }
+    return deck;
+  }
+  if (deckDef.id === 'erratic') {
+    const deck = createDeck();
+    deck.forEach(c => { setCardRank(c, randRank()); setCardSuit(c, randSuit()); });
+    return deck;
+  }
+  return createDeck();
+}
+
+function grantVoucher(id) {
+  state.vouchers.add(id);
+  const v = VOUCHERS.find(x => x.id === id);
+  if (v && v.onBuy) v.onBuy();
+}
 
 function isDebuffed(card) {
   return !!(state && state.boss && state.boss.debuffSuit === card.suit);
@@ -2353,6 +2499,13 @@ function scoreHand(cards) {
   // 깨진 글래스 카드는 덱에서 영구 제거
   brokenGlass.forEach(destroyCard);
 
+  // 플라스마 덱: 칩과 배수의 평균으로 균형 (예: 100×50 → 75×75)
+  if (deckIs('plasma')) {
+    const avg = (ctx.chips + ctx.mult) / 2;
+    ctx.chips = avg;
+    ctx.mult = avg;
+  }
+
   return {
     hand,
     chips: Math.round(ctx.chips),
@@ -2367,12 +2520,13 @@ function scoreHand(cards) {
    ============================================================ */
 let state = null;
 
-function newGame(hero = null) {
+function newGame(hero = null, deckDef = DECKS[0]) {
   state = {
     ante: 1,
     blindIdx: 0,           // 0=스몰, 1=빅, 2=보스
     hero,
-    gold: 4,
+    deckDef,               // 선택한 시작 덱
+    gold: 4 + (deckDef.id === 'yellow' ? 10 : 0),
     jokers: [],
     bestScore: 0,
     handLevels: {},        // 족보 레벨 (행성 카드로 상승)
@@ -2381,7 +2535,6 @@ function newGame(hero = null) {
     endless: false,        // 앤티 8 클리어 후 무한 모드
     // 조커용 추적 변수
     handTypeCounts: {},    // 족보별 사용 횟수 (초신성)
-    handTypeCounts: {},
     roundHandTypes: [],    // 이번 라운드에 낸 족보 (카드 상어)
     planetsUsed: 0,        // 사용한 행성 카드 수 (별자리)
     planetsUniq: new Set(),// 사용한 행성 종류 (위성)
@@ -2392,7 +2545,7 @@ function newGame(hero = null) {
     discardedJacksThisRound: 0,
     firstDiscardDone: false,
     // 영구 덱 + 소모품 (1+2단계)
-    fullDeck: createDeck(),   // 런 내내 유지되는 덱 (타로로 강화/파괴/복제)
+    fullDeck: buildStartingDeck(deckDef), // 런 내내 유지되는 덱 (타로로 강화/파괴/복제)
     consumables: [],          // 보유 소모품 (타로/행성/스펙트럴)
     consumableSlots: 2,
     lastConsumable: null,     // '광대' 타로용
@@ -2415,6 +2568,21 @@ function newGame(hero = null) {
     discardedCardsThisRound: 0,
     busy: false,
   };
+  // 덱별 시작 보너스 적용
+  if (deckDef.id === 'magic') {
+    grantVoucher('crystal_ball'); // 소모품 슬롯 +1
+    addConsumable({ kind: 'tarot', def: TAROTS.find(t => t.id === 'fool') });
+    addConsumable({ kind: 'tarot', def: TAROTS.find(t => t.id === 'fool') });
+  } else if (deckDef.id === 'nebula') {
+    grantVoucher('telescope');
+    state.consumableSlots = Math.max(1, state.consumableSlots - 1);
+  } else if (deckDef.id === 'ghost') {
+    addConsumable({ kind: 'spectral', def: SPECTRALS.find(s => s.id === 'hex') });
+  } else if (deckDef.id === 'zodiac') {
+    grantVoucher('tarot_merchant');
+    grantVoucher('planet_merchant');
+    grantVoucher('overstock');
+  }
   prepareBlindSelect();
   showScreen('blindSelectScreen');
 }
@@ -2426,7 +2594,7 @@ function pickBoss() {
 
 function effectiveHandSize() {
   return Math.max(1, HAND_SIZE + jokerSum('handSizeMod') + state.extraHandSize
-    + (hasVoucher('paint_brush') ? 1 : 0)
+    + (hasVoucher('paint_brush') ? 1 : 0) + deckMod('handSizeMod')
     - (state.boss && state.boss.handSizeDown ? state.boss.handSizeDown : 0));
 }
 
@@ -2438,9 +2606,9 @@ function startRound() {
   state.roundScore = 0;
   const voucherHands = (hasVoucher('grabber') ? 1 : 0) - (hasVoucher('hieroglyph') ? 1 : 0);
   state.handsLeft = state.boss && state.boss.oneHand
-    ? 1 : Math.max(1, HANDS_PER_ROUND + jokerSum('handsMod') + voucherHands);
+    ? 1 : Math.max(1, HANDS_PER_ROUND + jokerSum('handsMod') + voucherHands + deckMod('handsMod'));
   state.discardsLeft = state.boss && state.boss.noDiscards
-    ? 0 : Math.max(0, DISCARDS_PER_ROUND + jokerSum('discardsMod') + (hasVoucher('wasteful') ? 1 : 0));
+    ? 0 : Math.max(0, DISCARDS_PER_ROUND + jokerSum('discardsMod') + (hasVoucher('wasteful') ? 1 : 0) + deckMod('discardsMod'));
   state.discardedCardsThisRound = 0;
   state.roundHandTypes = [];
   state.discardsUsedThisRound = 0;
@@ -2637,6 +2805,7 @@ const el = {};
  'consumArea', 'shopConsums', 'toast', 'jtip', 'deckBtn', 'deckModal', 'deckModalInner',
  'deckModalBody', 'deckModalCount', 'deckCloseBtn',
  'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'tutorialBtn', 'startHelpBtn', 'heroStartBtn', 'heroNoneBtn', 'heroBackBtn', 'retryBtn',
+ 'deckSelectSub', 'deckGrid', 'deckBackBtn', 'saveCodeBtn', 'saveModal', 'saveCodeArea', 'saveCopyBtn', 'saveImportBtn', 'saveCloseBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
  'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
  'packModalCards', 'packTargetPanel', 'packTargetTitle', 'packTargetHint', 'packTargetCards',
@@ -2758,18 +2927,70 @@ let tutorialActive = false;
 let tutorialIndex = 0;
 let helpTab = 'basic';
 
+let pendingDeck = null;
+
 function startNewGame(withTutorial = false) {
   beep(660, 0.08);
   pendingTutorialStart = withTutorial;
   stopTutorial();
+  renderDeckSelect();
+  showScreen('deckSelectScreen');
+}
+
+function renderDeckSelect() {
+  const unlocked = DECKS.filter(isDeckUnlocked).length;
+  el.deckSelectSub.textContent = `통산 승리 ${profile.totalWins}회 · 해금된 덱 ${unlocked}/${DECKS.length}`;
+  el.deckGrid.innerHTML = '';
+  DECKS.forEach(d => {
+    const tile = document.createElement('div');
+    const open = isDeckUnlocked(d);
+    tile.className = 'deck-tile' + (open ? '' : ' locked');
+    const wins = profile.deckWins[d.id] || 0;
+    tile.innerHTML =
+      `<div class="d-icon">${d.icon}</div>` +
+      `<div class="d-name">${d.name}</div>` +
+      `<div class="d-desc">${d.desc}</div>` +
+      (open
+        ? (wins ? `<div class="d-wins">🏆 승리 ${wins}회</div>` : '')
+        : `<div class="d-lock">${unlockText(d)}</div>`);
+    if (open) tile.addEventListener('click', () => selectDeck(d));
+    el.deckGrid.appendChild(tile);
+  });
+}
+
+function selectDeck(d) {
+  pendingDeck = d;
+  sfx.select();
   showScreen('heroSelectScreen');
 }
 
 function startHeroGame(hero = null) {
   beep(660, 0.08);
-  newGame(hero);
+  newGame(hero, pendingDeck || DECKS[0]);
   if (pendingTutorialStart) startTutorial();
   else stopTutorial();
+}
+
+/* ---------- 저장 코드 모달 ---------- */
+function openSaveModal() {
+  el.saveCodeArea.value = exportSave();
+  el.saveModal.style.display = 'flex';
+}
+function closeSaveModal() { el.saveModal.style.display = 'none'; }
+function copySaveCode() {
+  el.saveCodeArea.select();
+  try { document.execCommand('copy'); } catch (e) { /* 무시 */ }
+  if (navigator.clipboard) navigator.clipboard.writeText(el.saveCodeArea.value).catch(() => {});
+  toast('저장 코드를 복사했습니다!');
+}
+function importSaveCode() {
+  if (importSave(el.saveCodeArea.value)) {
+    toast('✅ 저장 데이터를 가져왔습니다!');
+    closeSaveModal();
+    renderDeckSelect();
+  } else {
+    toast('⚠️ 올바르지 않은 저장 코드입니다');
+  }
 }
 
 function startTutorial() {
@@ -3267,8 +3488,11 @@ function discardCards() {
 let pendingReward = 0;
 
 function roundClear() {
-  // 보스 격파 훅 (로켓, 모닥불)
-  if (state.blindIdx === 2) state.jokers.slice().forEach(j => j.onBossDefeat && j.onBossDefeat());
+  // 보스 격파 훅 (로켓, 모닥불, 입체 사진 덱)
+  if (state.blindIdx === 2) {
+    state.jokers.slice().forEach(j => j.onBossDefeat && j.onBossDefeat());
+    if (deckIs('anaglyph')) { state.doubleTagNext = true; toast('입체 사진 덱: 더블 태그 획득!'); }
+  }
   // 라운드 종료 훅 (황금 조커, 로켓, 위성, 팝콘, 그로 미셸 등)
   const notes = [];
   state.jokers.slice().forEach(j => { if (j.onRoundEnd) { const r = j.onRoundEnd(); if (r) notes.push(r); } });
@@ -3285,22 +3509,35 @@ function roundClear() {
 
   // 골드 보상: 블라인드 기본($3/$4/$5) + 남은 패 내기 ×$1 + 이자($5당 $1, 최대 $5, '달까지'면 2배)
   const base = BLIND_REWARDS[state.blindIdx];
-  const handBonus = state.handsLeft;
+  // 초록 덱: 남은 패 $2·버리기 $1, 이자 없음
+  const handBonus = deckIs('green') ? 2 * state.handsLeft : state.handsLeft;
+  const discardBonus = deckIs('green') ? state.discardsLeft : 0;
   const interestCap = hasVoucher('seed_money') ? 10 : 5; // 종잣돈 바우처
   let interest = Math.min(interestCap, Math.floor(Math.max(0, state.gold) / 5));
   if (hasJoker('to_the_moon')) interest += Math.min(interestCap, Math.floor(Math.max(0, state.gold) / 5));
-  pendingReward = base + handBonus + interest;
+  if (deckIs('green')) interest = 0;
+  pendingReward = base + handBonus + discardBonus + interest;
   const noteHTML = notes.length ? `<div style="font-size:15px; margin-top:6px;">${notes.join(' · ')}</div>` : '';
 
   // 앤티 8 보스 클리어 = 승리!
   if (state.blindIdx === 2 && state.ante === WIN_ANTE && !state.endless) {
     state.gold += pendingReward;
     pendingReward = 0;
+    // 승리 기록 저장 + 새로 해금된 덱 확인
+    const lockedBefore = DECKS.filter(d => !isDeckUnlocked(d)).map(d => d.id);
+    profile.totalWins++;
+    profile.deckWins[state.deckDef.id] = (profile.deckWins[state.deckDef.id] || 0) + 1;
+    saveProfile();
+    const newlyUnlocked = DECKS.filter(d => lockedBefore.includes(d.id) && isDeckUnlocked(d));
     sfx.clear();
     el.victoryStats.innerHTML =
       `앤티 ${WIN_ANTE}의 보스 블라인드를 격파했습니다!<br>` +
+      `사용 덱: <b>${state.deckDef.icon} ${state.deckDef.name}</b> · 통산 승리 <b>${profile.totalWins}회</b><br>` +
       `최고 라운드 점수: <b style="color:var(--blue)">${state.bestScore.toLocaleString()}</b><br>` +
-      `보유 골드: <b style="color:var(--gold)">${state.gold}G</b>`;
+      `보유 골드: <b style="color:var(--gold)">${state.gold}G</b>` +
+      (newlyUnlocked.length
+        ? `<br><span style="color:var(--gold)">🔓 새 덱 해금: ${newlyUnlocked.map(d => d.icon + ' ' + d.name).join(', ')}</span>`
+        : '');
     showScreen('victoryScreen');
     return;
   }
@@ -3308,7 +3545,7 @@ function roundClear() {
   sfx.clear();
   el.clearReward.innerHTML =
     `보상: <b style="color:var(--gold)">${pendingReward}G</b>` +
-    ` (블라인드 ${base}G + 남은 패 내기 ${handBonus}G + 이자 ${interest}G)` + noteHTML;
+    ` (블라인드 ${base}G + 남은 패 내기 ${handBonus}G${discardBonus ? ` + 남은 버리기 ${discardBonus}G` : ''} + 이자 ${interest}G)` + noteHTML;
   el.clearBanner.classList.add('show');
 }
 
@@ -3397,8 +3634,9 @@ function stockShop() {
   const jw = 20;
   const tw = 4 * (hasVoucher('tarot_merchant') ? 2 : 1);
   const pw = 4 * (hasVoucher('planet_merchant') ? 2 : 1);
+  const sw = deckIs('ghost') ? 4 : 0; // 유령 덱: 상점에 스펙트럴 등장
   for (let i = 0; i < slots; i++) {
-    const r = Math.random() * (jw + tw + pw);
+    const r = Math.random() * (jw + tw + pw + sw);
     if (r < jw) {
       const j = randomShopJoker(exclude);
       if (j) {
@@ -3407,9 +3645,9 @@ function stockShop() {
         continue;
       }
     }
-    shopStock.push(r < jw + tw
-      ? { kind: 'consum', c: { kind: 'tarot', def: randTarot() }, sold: false }
-      : { kind: 'consum', c: { kind: 'planet', def: randPlanet() }, sold: false });
+    if (r < jw + tw) shopStock.push({ kind: 'consum', c: { kind: 'tarot', def: randTarot() }, sold: false });
+    else if (r < jw + tw + pw) shopStock.push({ kind: 'consum', c: { kind: 'planet', def: randPlanet() }, sold: false });
+    else shopStock.push({ kind: 'consum', c: { kind: 'spectral', def: randSpectral() }, sold: false });
   }
   if (state.shopCoupons && state.shopCoupons.length) {
     const coupons = state.shopCoupons.splice(0);
@@ -3454,6 +3692,7 @@ function shopItemPrice(item) {
   if (item.forcedFree) return 0;
   if (item.kind === 'joker') return discounted(item.joker.cost + (item.edition ? ED_PRICE[item.edition] : 0));
   if (item.c.kind === 'planet') return planetPrice() === 0 ? 0 : discounted(planetPrice());
+  if (item.c.kind === 'spectral') return discounted(4);
   return discounted(TAROT_COST);
 }
 function packPrice(pack) { return discounted(pack.cost); }
@@ -3908,7 +4147,13 @@ el.tutorialBtn.addEventListener('click', () => startNewGame(true));
 el.startHelpBtn.addEventListener('click', () => openHelp('basic'));
 el.heroStartBtn.addEventListener('click', () => startHeroGame(HEROES[0]));
 el.heroNoneBtn.addEventListener('click', () => startHeroGame(null));
-el.heroBackBtn.addEventListener('click', () => showScreen('startScreen'));
+el.heroBackBtn.addEventListener('click', () => { renderDeckSelect(); showScreen('deckSelectScreen'); });
+el.deckBackBtn.addEventListener('click', () => showScreen('startScreen'));
+el.saveCodeBtn.addEventListener('click', openSaveModal);
+el.saveCopyBtn.addEventListener('click', copySaveCode);
+el.saveImportBtn.addEventListener('click', importSaveCode);
+el.saveCloseBtn.addEventListener('click', closeSaveModal);
+el.saveModal.addEventListener('click', e => { if (e.target === el.saveModal) closeSaveModal(); });
 el.retryBtn.addEventListener('click', () => startNewGame(false));
 el.playBtn.addEventListener('click', playHand);
 el.discardBtn.addEventListener('click', discardCards);
