@@ -687,6 +687,36 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   flex-wrap: wrap;
   margin-bottom: 14px;
 }
+#packTargetPanel {
+  display: none;
+  background: #070a12aa;
+  border: 1px solid #ffffff22;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 0 auto 14px;
+}
+#packTargetPanel.show { display: block; }
+#packTargetTitle { color: var(--gold); font-weight: 800; margin-bottom: 4px; }
+#packTargetHint { font-size: 12px; color: #cbd3df; margin-bottom: 10px; }
+#packTargetCards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+#packTargetCards .card { cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
+#packTargetCards .card.selected-target {
+  transform: translateY(-8px);
+  box-shadow: 0 0 0 3px var(--gold), 0 12px 18px #0008;
+}
+#packTargetActions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+#packTargetActions button { font-size: 13px; padding: 8px 18px; }
 .pack-pick { cursor: pointer; transition: transform 0.12s; position: relative; }
 .pack-pick:hover { transform: translateY(-6px) scale(1.04); }
 .pack-pick.picked, .pack-pick.disabled { opacity: 0.3; pointer-events: none; }
@@ -938,6 +968,15 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     <div id="packModalTitle"></div>
     <div id="packModalSub"></div>
     <div id="packModalCards"></div>
+    <div id="packTargetPanel">
+      <div id="packTargetTitle"></div>
+      <div id="packTargetHint"></div>
+      <div id="packTargetCards"></div>
+      <div id="packTargetActions">
+        <button id="packUseBtn" class="btn-primary">즉시 사용</button>
+        <button id="packCancelUseBtn" class="btn-blue">다른 카드 고르기</button>
+      </div>
+    </div>
     <button id="packSkipBtn" class="btn-blue" style="font-size:14px; padding:8px 24px;">건너뛰기 ▶</button>
   </div>
 </div>
@@ -2344,7 +2383,8 @@ const el = {};
  'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
  'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
- 'packModalCards', 'packSkipBtn', 'shopAnte', 'ownedJokersLabel', 'shopConsumsLabel', 'voucherLabel',
+ 'packModalCards', 'packTargetPanel', 'packTargetTitle', 'packTargetHint', 'packTargetCards',
+ 'packUseBtn', 'packCancelUseBtn', 'packSkipBtn', 'shopAnte', 'ownedJokersLabel', 'shopConsumsLabel', 'voucherLabel',
  'clearReward', 'toShopBtn', 'gameoverStats',
 ].forEach(id => { el[id] = document.getElementById(id); });
 
@@ -3233,13 +3273,18 @@ function openPack(pack) {
     if (data.id) usedIds.add(data.id);
     items.push({ data, picked: false });
   }
-  packState = { content: k.content, picksLeft: pack.pick, items };
+  packState = { content: k.content, picksLeft: pack.pick, items, pendingUse: null, targetSelected: [] };
   el.packModalTitle.textContent = `${k.icon} ${pack.size}${k.name}`;
   renderPackModal();
   el.packModal.classList.add('show');
 }
 
 function renderPackModal() {
+  if (packState.pendingUse) {
+    renderPackTargetPanel();
+    return;
+  }
+  el.packTargetPanel.classList.remove('show');
   el.packModalSub.textContent = `${packState.picksLeft}장을 선택하세요`;
   el.packModalCards.innerHTML = '';
   packState.items.forEach((it, i) => {
@@ -3248,12 +3293,8 @@ function renderPackModal() {
     else if (packState.content === 'card') div = cardEl(it.data);
     else div = consumEl({ kind: packState.content, def: it.data });
     div.classList.add('pack-pick');
-    // 선택 불가 조건 표시
     let blocked = false;
-    if (!it.picked) {
-      if (packState.content === 'joker' && state.jokers.length >= maxJokers()) blocked = true;
-      if ((packState.content === 'tarot' || packState.content === 'spectral') && !hasConsumRoom()) blocked = true;
-    }
+    if (!it.picked && packState.content === 'joker' && state.jokers.length >= maxJokers()) blocked = true;
     if (it.picked || blocked) div.classList.add(it.picked ? 'picked' : 'disabled');
     else div.addEventListener('click', () => pickFromPack(i));
     el.packModalCards.appendChild(div);
@@ -3276,9 +3317,9 @@ function pickFromPack(i) {
     state.lastConsumable = { kind: 'planet', def: it.data };
     toast(`${it.data.name}: ${type.name} Lv.${handLevel(type)}!`);
   } else if (content === 'tarot' || content === 'spectral') {
-    if (!addConsumable({ kind: content, def: it.data })) return;
-    toast(`${it.data.name} 획득!`);
-  } else { // card
+    beginPackInstantUse(i);
+    return;
+  } else {
     state.fullDeck.push(it.data);
     toast(`${it.data.rank}${it.data.sym} 덱에 추가!`);
   }
@@ -3289,8 +3330,112 @@ function pickFromPack(i) {
   else renderPackModal();
 }
 
+function packUseRequirement(kind, id) {
+  const reqs = {
+    tarot: {
+      magician: [1, 2], empress: [1, 2], hierophant: [1, 2],
+      lovers: [1, 1], chariot: [1, 1], justice: [1, 1],
+      strength: [1, 2], hanged_man: [1, 2], death: [2, 2],
+      devil: [1, 1], tower: [1, 1],
+      star: [1, 3], moon: [1, 3], sun: [1, 3], world: [1, 3],
+    },
+    spectral: {
+      talisman: [1, 1], aura: [1, 1], deja_vu: [1, 1],
+      trance: [1, 1], medium: [1, 1], cryptid: [1, 1],
+    }
+  };
+  return (reqs[kind] && reqs[kind][id]) || [0, 0];
+}
+
+function beginPackInstantUse(i) {
+  const it = packState.items[i];
+  const [min, max] = packUseRequirement(packState.content, it.data.id);
+  packState.pendingUse = { index: i, min, max };
+  packState.targetSelected = [];
+  if (max === 0) {
+    executePackInstantUse();
+    return;
+  }
+  renderPackModal();
+}
+
+function renderPackTargetPanel() {
+  const pending = packState.pendingUse;
+  const it = packState.items[pending.index];
+  el.packModalSub.textContent = `${it.data.name} 즉시 사용`;
+  el.packTargetTitle.textContent = it.data.name;
+  el.packTargetHint.textContent = pending.min === pending.max
+    ? `대상 카드 ${pending.min}장을 선택하세요.`
+    : `대상 카드 ${pending.min}~${pending.max}장을 선택하세요.`;
+  el.packModalCards.innerHTML = '';
+  packState.items.forEach((card, i) => {
+    const div = consumEl({ kind: packState.content, def: card.data });
+    div.classList.add('pack-pick');
+    if (i !== pending.index || card.picked) div.classList.add('disabled');
+    el.packModalCards.appendChild(div);
+  });
+  el.packTargetCards.innerHTML = '';
+  state.hand.forEach(card => {
+    const div = cardEl(card);
+    if (packState.targetSelected.includes(card)) div.classList.add('selected-target');
+    div.addEventListener('click', () => togglePackTarget(card));
+    el.packTargetCards.appendChild(div);
+  });
+  el.packUseBtn.disabled = packState.targetSelected.length < pending.min || packState.targetSelected.length > pending.max;
+  el.packTargetPanel.classList.add('show');
+}
+
+function togglePackTarget(card) {
+  const pending = packState.pendingUse;
+  const i = packState.targetSelected.indexOf(card);
+  if (i >= 0) packState.targetSelected.splice(i, 1);
+  else {
+    if (packState.targetSelected.length >= pending.max) packState.targetSelected.shift();
+    packState.targetSelected.push(card);
+  }
+  renderPackModal();
+}
+
+function executePackInstantUse() {
+  const pending = packState.pendingUse;
+  if (!pending) return;
+  const it = packState.items[pending.index];
+  state.selected = new Set(packState.targetSelected);
+  const result = it.data.use();
+  if (result && result.err) {
+    toast(result.err);
+    renderPackModal();
+    return;
+  }
+  it.picked = true;
+  packState.picksLeft--;
+  packState.pendingUse = null;
+  packState.targetSelected = [];
+  state.selected.clear();
+  state.lastConsumable = { kind: packState.content, def: it.data };
+  toast(result || `${it.data.name} 사용!`);
+  sfx.select();
+  renderAll(false);
+  if (packState.picksLeft <= 0) closePack();
+  else renderPackModal();
+}
+
+function cancelPackInstantUse() {
+  if (!packState) return;
+  packState.pendingUse = null;
+  packState.targetSelected = [];
+  state.selected.clear();
+  renderPackModal();
+}
+
 function closePack() {
+  if (packState) {
+    packState.pendingUse = null;
+    packState.targetSelected = [];
+    state.selected.clear();
+  }
   packState = null;
+  el.packTargetPanel.classList.remove('show');
   el.packModal.classList.remove('show');
   if (el.shopScreen.classList.contains('active')) renderShop();
   else if (el.blindSelectScreen.classList.contains('active')) renderBlindSelect();
@@ -3325,6 +3470,8 @@ el.deckBtn.addEventListener('click', () => { renderDeckModal(); el.deckModal.cla
 el.deckCloseBtn.addEventListener('click', () => el.deckModal.classList.remove('show'));
 el.deckModal.addEventListener('click', e => { if (e.target === el.deckModal) el.deckModal.classList.remove('show'); });
 el.packSkipBtn.addEventListener('click', closePack);
+el.packUseBtn.addEventListener('click', executePackInstantUse);
+el.packCancelUseBtn.addEventListener('click', cancelPackInstantUse);
 el.endlessBtn.addEventListener('click', () => { state.endless = true; beep(660, 0.08); openShop(); });
 el.victoryNewBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
 </script>
