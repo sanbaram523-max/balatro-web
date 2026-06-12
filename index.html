@@ -1052,6 +1052,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
       </div>
       <div class="hero-actions">
         <button id="heroStartBtn" class="btn-primary">김대현으로 시작</button>
+        <button id="heroNoneBtn">선택하지 않음</button>
         <button id="heroBackBtn" class="btn-blue">뒤로</button>
       </div>
     </div>
@@ -2366,7 +2367,7 @@ function scoreHand(cards) {
    ============================================================ */
 let state = null;
 
-function newGame(hero = HEROES[0]) {
+function newGame(hero = null) {
   state = {
     ante: 1,
     blindIdx: 0,           // 0=스몰, 1=빅, 2=보스
@@ -2635,7 +2636,7 @@ const el = {};
  'jokerArea', 'playedCards', 'handResult', 'handArea', 'deckCount', 'deckCountText',
  'consumArea', 'shopConsums', 'toast', 'jtip', 'deckBtn', 'deckModal', 'deckModalInner',
  'deckModalBody', 'deckModalCount', 'deckCloseBtn',
- 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'tutorialBtn', 'startHelpBtn', 'heroStartBtn', 'heroBackBtn', 'retryBtn',
+ 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'tutorialBtn', 'startHelpBtn', 'heroStartBtn', 'heroNoneBtn', 'heroBackBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
  'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
  'packModalCards', 'packTargetPanel', 'packTargetTitle', 'packTargetHint', 'packTargetCards',
@@ -2764,7 +2765,7 @@ function startNewGame(withTutorial = false) {
   showScreen('heroSelectScreen');
 }
 
-function startHeroGame(hero = HEROES[0]) {
+function startHeroGame(hero = null) {
   beep(660, 0.08);
   newGame(hero);
   if (pendingTutorialStart) startTutorial();
@@ -3904,6 +3905,7 @@ el.newGameBtn.addEventListener('click', () => startNewGame(false));
 el.tutorialBtn.addEventListener('click', () => startNewGame(true));
 el.startHelpBtn.addEventListener('click', () => openHelp('basic'));
 el.heroStartBtn.addEventListener('click', () => startHeroGame(HEROES[0]));
+el.heroNoneBtn.addEventListener('click', () => startHeroGame(null));
 el.heroBackBtn.addEventListener('click', () => showScreen('startScreen'));
 el.retryBtn.addEventListener('click', () => startNewGame(false));
 el.playBtn.addEventListener('click', playHand);
