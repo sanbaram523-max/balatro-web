@@ -802,6 +802,125 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .tag-strip b { color: var(--gold); }
 
+/* ---------- Tutorial / Help ---------- */
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(320px, 90vw);
+}
+.start-actions button { width: 100%; }
+.help-fab {
+  position: fixed;
+  right: 14px;
+  top: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  z-index: 180;
+  font-size: 20px;
+  padding: 0;
+  background: #1b2533;
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  box-shadow: 0 5px 0 #05070b;
+}
+#tutorialPanel {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: min(360px, calc(100vw - 28px));
+  background: linear-gradient(180deg, #1e2938, #101722);
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 8px 0 #07090d, 0 18px 30px #0009;
+  padding: 14px;
+  z-index: 260;
+  display: none;
+}
+#tutorialPanel.show { display: block; animation: fadeIn 0.2s; }
+#tutorialStep { color: var(--gold); font-size: 12px; font-weight: 800; margin-bottom: 4px; }
+#tutorialTitle { font-size: 19px; font-weight: 900; margin-bottom: 8px; }
+#tutorialText { font-size: 13px; line-height: 1.55; color: #d7dfeb; }
+.tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tutorial-actions button {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+#helpModal {
+  position: fixed;
+  inset: 0;
+  background: #000000d8;
+  z-index: 270;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+#helpModal.show { display: flex; animation: fadeIn 0.2s; }
+#helpInner {
+  width: min(980px, 96vw);
+  max-height: 90vh;
+  overflow: hidden;
+  background: var(--panel);
+  border: 2px solid #ffffff24;
+  border-radius: 12px;
+  box-shadow: 0 12px 36px #000b;
+  display: flex;
+  flex-direction: column;
+}
+#helpHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #ffffff18;
+}
+#helpHeader h2 { margin: 0; color: var(--gold); font-size: 22px; }
+#helpTabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid #ffffff12;
+}
+#helpTabs button {
+  font-size: 12px;
+  padding: 8px 12px;
+  background: #101722;
+}
+#helpTabs button.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+#helpBody {
+  padding: 16px;
+  overflow-y: auto;
+  line-height: 1.6;
+  font-size: 14px;
+}
+#helpBody h3 { color: var(--gold); margin: 0 0 10px; }
+#helpBody h4 { color: var(--blue); margin: 16px 0 6px; }
+#helpBody table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+#helpBody th, #helpBody td {
+  border-bottom: 1px solid #ffffff14;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+#helpBody th { color: var(--gold); background: #00000030; }
+
 /* ---------- 모바일 반응형 ---------- */
 @media (max-width: 640px) {
   :root { --card-w: 44px; --card-h: 66px; }
@@ -835,7 +954,11 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 <div id="startScreen" class="screen active">
   <div class="title-big">웹라트로</div>
   <div class="subtitle">포커 패 × 조커 × 덱빌딩 로그라이크</div>
-  <button id="newGameBtn" class="btn-primary">새 게임</button>
+  <div class="start-actions">
+    <button id="newGameBtn" class="btn-primary">게임 바로 시작</button>
+    <button id="tutorialBtn" class="btn-blue">튜토리얼 보고 시작</button>
+    <button id="startHelpBtn">도움말</button>
+  </div>
   <div class="subtitle" style="font-size:13px; max-width:420px; line-height:1.7;">
     8장 중 최대 5장으로 포커 패를 만들어 점수를 모으세요.<br>
     조커를 사 모아 점점 높아지는 목표 점수를 버텨내세요!
@@ -986,6 +1109,32 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 <!-- ===================== 조커/소모품 툴팁 ===================== -->
 <div id="jtip"></div>
+
+<!-- ===================== Tutorial / Help ===================== -->
+<button id="helpFab" class="help-fab" title="도움말">?</button>
+
+<div id="tutorialPanel">
+  <div id="tutorialStep"></div>
+  <div id="tutorialTitle"></div>
+  <div id="tutorialText"></div>
+  <div class="tutorial-actions">
+    <button id="tutorialHandsBtn" class="btn-blue">족보 전체 보기</button>
+    <button id="tutorialSkipBtn">건너뛰기</button>
+    <button id="tutorialPrevBtn">이전</button>
+    <button id="tutorialNextBtn" class="btn-primary">다음</button>
+  </div>
+</div>
+
+<div id="helpModal">
+  <div id="helpInner">
+    <div id="helpHeader">
+      <h2>도움말</h2>
+      <button id="helpCloseBtn" class="btn-blue" style="font-size:13px; padding:8px 14px;">닫기</button>
+    </div>
+    <div id="helpTabs"></div>
+    <div id="helpBody"></div>
+  </div>
+</div>
 
 <!-- ===================== 라운드 클리어 배너 ===================== -->
 <div id="clearBanner">
@@ -2380,17 +2529,196 @@ const el = {};
  'jokerArea', 'playedCards', 'handResult', 'handArea', 'deckCount', 'deckCountText',
  'consumArea', 'shopConsums', 'toast', 'jtip', 'deckBtn', 'deckModal', 'deckModalInner',
  'deckModalBody', 'deckModalCount', 'deckCloseBtn',
- 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'retryBtn',
+ 'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'tutorialBtn', 'startHelpBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
  'shopPacks', 'shopVoucher', 'packModal', 'packModalTitle', 'packModalSub',
  'packModalCards', 'packTargetPanel', 'packTargetTitle', 'packTargetHint', 'packTargetCards',
  'packUseBtn', 'packCancelUseBtn', 'packSkipBtn', 'shopAnte', 'ownedJokersLabel', 'shopConsumsLabel', 'voucherLabel',
  'clearReward', 'toShopBtn', 'gameoverStats',
+ 'helpFab', 'helpModal', 'helpTabs', 'helpBody', 'helpCloseBtn',
+ 'tutorialPanel', 'tutorialStep', 'tutorialTitle', 'tutorialText',
+ 'tutorialHandsBtn', 'tutorialSkipBtn', 'tutorialPrevBtn', 'tutorialNextBtn',
 ].forEach(id => { el[id] = document.getElementById(id); });
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+}
+
+const TUTORIAL_STEPS = [
+  {
+    title: '블라인드 선택',
+    text: '각 앤티는 스몰, 빅, 보스 블라인드로 이루어집니다. 스몰/빅은 플레이하거나 스킵할 수 있고, 스킵하면 태그 보상을 얻습니다. 보스는 반드시 플레이해야 합니다.',
+  },
+  {
+    title: '포커 족보',
+    text: '같은 숫자, 같은 무늬, 연속된 숫자를 모으면 더 강한 패가 됩니다. 처음엔 페어(같은 숫자 2장), 스트레이트(연속 숫자 5장), 플러시(같은 무늬 5장)만 기억해도 충분합니다.',
+    helpTab: 'hands',
+  },
+  {
+    title: '카드 선택',
+    text: '손패에서 최대 5장을 선택해 포커 패를 만듭니다. 선택한 카드는 위로 올라오고, 예상 족보와 점수가 화면에 표시됩니다.',
+  },
+  {
+    title: '패 내기와 점수',
+    text: '패 내기를 누르면 칩 × 배수로 점수를 얻습니다. 족보 기본 점수, 낸 카드의 칩, 강화 카드, 조커 효과가 모두 합쳐집니다.',
+  },
+  {
+    title: '버리기와 덱 보기',
+    text: '필요 없는 카드는 버려서 새 카드를 뽑을 수 있습니다. 덱 보기를 누르면 남은 카드를 확인할 수 있어 플러시나 스트레이트를 노릴 때 도움이 됩니다.',
+  },
+  {
+    title: '조커와 소모품',
+    text: '조커는 조건이 맞으면 자동으로 점수를 바꿉니다. 타로, 행성, 스펙트럴 카드는 덱을 바꾸거나 족보를 성장시키는 핵심 도구입니다.',
+  },
+  {
+    title: '상점과 팩',
+    text: '라운드를 클리어하면 상점에 갑니다. 조커, 타로, 행성, 부스터 팩, 바우처를 구매해 다음 라운드를 준비하세요. 아르카나/스펙트럴 팩은 선택한 카드가 즉시 사용됩니다.',
+  },
+  {
+    title: '승리 목표',
+    text: '앤티 8의 보스 블라인드를 격파하면 승리입니다. 강한 조커 조합, 성장한 족보, 강화된 덱을 조합해 점점 커지는 목표 점수를 넘기세요.',
+  },
+];
+
+const HELP_TABS = [
+  { id: 'basic', label: '기본', html: `
+    <h3>기본 흐름</h3>
+    <p>블라인드를 선택하고, 손패에서 최대 5장을 골라 포커 패를 냅니다. 목표 점수를 넘기면 상점으로 이동하고, 넘기지 못한 채 패 내기 횟수를 모두 쓰면 게임오버입니다.</p>
+    <h4>점수 계산</h4>
+    <p><b>최종 점수 = 칩 × 배수</b>입니다. 족보 기본 칩/배수에 카드 칩, 카드 강화, 조커 효과가 더해집니다.</p>
+    <h4>버리기</h4>
+    <p>필요 없는 카드를 선택해 버리면 덱에서 새 카드를 보충합니다. 덱 보기를 통해 남은 카드를 확인하면 더 전략적으로 버릴 수 있습니다.</p>
+  ` },
+  { id: 'hands', label: '포커 족보', html: `
+    <h3>포커 족보</h3>
+    <p>아래로 갈수록 더 강한 패입니다. 히든 족보는 카드 복제나 변형으로 같은 카드를 여러 장 만든 뒤 노릴 수 있습니다.</p>
+    <table>
+      <thead><tr><th>족보</th><th>설명</th><th>예시</th></tr></thead>
+      <tbody>
+        <tr><td>하이카드</td><td>특별한 조합이 없을 때 가장 높은 카드 1장</td><td>A</td></tr>
+        <tr><td>원 페어</td><td>같은 숫자 2장</td><td>8, 8</td></tr>
+        <tr><td>투 페어</td><td>같은 숫자 2장짜리 묶음 2개</td><td>4, 4, Q, Q</td></tr>
+        <tr><td>트리플</td><td>같은 숫자 3장</td><td>7, 7, 7</td></tr>
+        <tr><td>스트레이트</td><td>숫자가 연속된 5장</td><td>5, 6, 7, 8, 9</td></tr>
+        <tr><td>플러시</td><td>같은 무늬 5장</td><td>♥ 5장</td></tr>
+        <tr><td>풀하우스</td><td>트리플 + 페어</td><td>K, K, K, 3, 3</td></tr>
+        <tr><td>포카드</td><td>같은 숫자 4장</td><td>A, A, A, A</td></tr>
+        <tr><td>스트레이트 플러시</td><td>같은 무늬이면서 연속된 5장</td><td>♠ 5, 6, 7, 8, 9</td></tr>
+        <tr><td>로열 플러시</td><td>같은 무늬 10, J, Q, K, A</td><td>♠ 10, J, Q, K, A</td></tr>
+        <tr><td>파이브 카드</td><td>같은 숫자 5장</td><td>9, 9, 9, 9, 9</td></tr>
+        <tr><td>플러시 하우스</td><td>같은 무늬 풀하우스</td><td>♥ K, K, K, 3, 3</td></tr>
+        <tr><td>플러시 파이브</td><td>같은 무늬 같은 숫자 5장</td><td>♦ A, A, A, A, A</td></tr>
+      </tbody>
+    </table>
+  ` },
+  { id: 'shop', label: '상점', html: `
+    <h3>상점</h3>
+    <p>라운드를 클리어하면 골드를 받고 상점에 갑니다. 조커, 타로/행성 카드, 부스터 팩, 바우처를 구매할 수 있습니다.</p>
+    <h4>조커</h4>
+    <p>조건이 맞으면 칩, 배수, 곱배수, 골드, 카드 변형 등 다양한 효과를 냅니다. 희귀도는 일반 &lt; 희귀 &lt; 레어 &lt; 전설 순입니다.</p>
+    <h4>바우처</h4>
+    <p>구매하면 이번 런 동안 계속 유지되는 영구 업그레이드입니다.</p>
+  ` },
+  { id: 'modifiers', label: '카드 효과', html: `
+    <h3>카드 효과</h3>
+    <h4>강화</h4>
+    <p>보너스(+30칩), 배수(+4배수), 와일드(모든 무늬), 글래스(×2배수, 파괴 위험), 스틸(손에 있으면 ×1.5), 스톤(+50칩), 골드(라운드 종료 $3), 럭키(확률 보상)가 있습니다.</p>
+    <h4>인장</h4>
+    <p>골드 인장($3), 레드 인장(카드 효과 재발동), 블루 인장(라운드 종료 행성 생성), 퍼플 인장(버릴 때 타로 생성)이 있습니다.</p>
+    <h4>에디션</h4>
+    <p>포일(+50칩), 홀로그래픽(+10배수), 폴리크롬(×1.5배수), 네거티브(슬롯 +1)가 있습니다.</p>
+  ` },
+  { id: 'packs', label: '팩', html: `
+    <h3>부스터 팩</h3>
+    <p>팩을 열면 여러 장 중 원하는 카드를 고릅니다. 점보/메가 팩은 더 많은 카드를 보여주며, 메가는 보통 2장을 선택합니다.</p>
+    <ul>
+      <li><b>아르카나 팩</b>: 타로 카드. 선택 즉시 사용됩니다.</li>
+      <li><b>천체 팩</b>: 행성 카드. 선택 즉시 족보 레벨이 오릅니다.</li>
+      <li><b>어릿광대 팩</b>: 조커 카드. 선택 즉시 보유합니다.</li>
+      <li><b>스펙트럴 팩</b>: 고위험 카드. 선택 즉시 사용됩니다.</li>
+      <li><b>스탠다드 팩</b>: 플레잉 카드. 선택 즉시 덱에 추가됩니다.</li>
+    </ul>
+  ` },
+  { id: 'tags', label: '태그', html: `
+    <h3>태그</h3>
+    <p>스몰/빅 블라인드는 스킵해서 태그 보상을 받을 수 있습니다. 대신 해당 블라인드의 골드 보상과 점수 기회는 포기합니다.</p>
+    <p>태그는 무료 조커, 무료 팩, 골드, 족보 레벨업, 무료 리롤 같은 강력한 보상을 줍니다. 보스 블라인드는 스킵할 수 없습니다.</p>
+  ` },
+];
+
+let tutorialActive = false;
+let tutorialIndex = 0;
+let helpTab = 'basic';
+
+function startNewGame(withTutorial = false) {
+  beep(660, 0.08);
+  newGame();
+  if (withTutorial) startTutorial();
+  else stopTutorial();
+}
+
+function startTutorial() {
+  tutorialActive = true;
+  tutorialIndex = 0;
+  renderTutorial();
+}
+
+function stopTutorial() {
+  tutorialActive = false;
+  el.tutorialPanel.classList.remove('show');
+}
+
+function renderTutorial() {
+  if (!tutorialActive) return;
+  const step = TUTORIAL_STEPS[tutorialIndex];
+  el.tutorialStep.textContent = `${tutorialIndex + 1} / ${TUTORIAL_STEPS.length}`;
+  el.tutorialTitle.textContent = step.title;
+  el.tutorialText.textContent = step.text;
+  el.tutorialPrevBtn.disabled = tutorialIndex === 0;
+  el.tutorialNextBtn.textContent = tutorialIndex === TUTORIAL_STEPS.length - 1 ? '끝내기' : '다음';
+  el.tutorialHandsBtn.style.display = step.helpTab === 'hands' ? 'inline-block' : 'none';
+  el.tutorialPanel.classList.add('show');
+}
+
+function nextTutorial() {
+  if (tutorialIndex >= TUTORIAL_STEPS.length - 1) {
+    stopTutorial();
+    return;
+  }
+  tutorialIndex++;
+  renderTutorial();
+}
+
+function prevTutorial() {
+  tutorialIndex = Math.max(0, tutorialIndex - 1);
+  renderTutorial();
+}
+
+function openHelp(tab = 'basic') {
+  helpTab = tab;
+  renderHelp();
+  el.helpModal.classList.add('show');
+}
+
+function closeHelp() {
+  el.helpModal.classList.remove('show');
+}
+
+function renderHelp() {
+  el.helpTabs.innerHTML = '';
+  HELP_TABS.forEach(tab => {
+    const btn = document.createElement('button');
+    btn.textContent = tab.label;
+    if (tab.id === helpTab) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      helpTab = tab.id;
+      renderHelp();
+    });
+    el.helpTabs.appendChild(btn);
+  });
+  const tab = HELP_TABS.find(t => t.id === helpTab) || HELP_TABS[0];
+  el.helpBody.innerHTML = tab.html;
 }
 
 function cardEl(card, opts = {}) {
@@ -3454,8 +3782,10 @@ function sellJoker(jokerIdx) {
 /* ============================================================
    이벤트 바인딩
    ============================================================ */
-el.newGameBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
-el.retryBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
+el.newGameBtn.addEventListener('click', () => startNewGame(false));
+el.tutorialBtn.addEventListener('click', () => startNewGame(true));
+el.startHelpBtn.addEventListener('click', () => openHelp('basic'));
+el.retryBtn.addEventListener('click', () => startNewGame(false));
 el.playBtn.addEventListener('click', playHand);
 el.discardBtn.addEventListener('click', discardCards);
 el.sortBtn.addEventListener('click', () => {
@@ -3472,8 +3802,15 @@ el.deckModal.addEventListener('click', e => { if (e.target === el.deckModal) el.
 el.packSkipBtn.addEventListener('click', closePack);
 el.packUseBtn.addEventListener('click', executePackInstantUse);
 el.packCancelUseBtn.addEventListener('click', cancelPackInstantUse);
+el.helpFab.addEventListener('click', () => openHelp('basic'));
+el.helpCloseBtn.addEventListener('click', closeHelp);
+el.helpModal.addEventListener('click', e => { if (e.target === el.helpModal) closeHelp(); });
+el.tutorialNextBtn.addEventListener('click', nextTutorial);
+el.tutorialPrevBtn.addEventListener('click', prevTutorial);
+el.tutorialSkipBtn.addEventListener('click', stopTutorial);
+el.tutorialHandsBtn.addEventListener('click', () => openHelp('hands'));
 el.endlessBtn.addEventListener('click', () => { state.endless = true; beep(660, 0.08); openShop(); });
-el.victoryNewBtn.addEventListener('click', () => { beep(660, 0.08); newGame(); });
+el.victoryNewBtn.addEventListener('click', () => startNewGame(false));
 </script>
 </body>
 </html>
