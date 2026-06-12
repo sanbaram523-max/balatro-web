@@ -709,6 +709,69 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 #toast.show { display: block; animation: fadeIn 0.2s; }
 
+/* ---------- Blind select + skip tags (Phase 5) ---------- */
+#blindSelectScreen {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 18px;
+}
+.blind-select-wrap {
+  width: min(960px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.blind-choice {
+  position: relative;
+  background: linear-gradient(180deg, #243041, #151a25);
+  border: 2px solid #556274;
+  box-shadow: 0 8px 0 #07090d, 0 18px 28px #0008;
+  border-radius: 8px;
+  padding: 14px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.blind-choice.current { border-color: var(--gold); }
+.blind-choice.locked { opacity: 0.45; filter: grayscale(0.8); }
+.blind-choice .bc-icon { font-size: 36px; }
+.blind-choice .bc-name { font-size: 20px; font-weight: 900; color: #fff; }
+.blind-choice .bc-target { color: var(--blue); font-size: 18px; font-weight: 800; }
+.blind-choice .bc-desc { font-size: 13px; line-height: 1.45; color: #c9d2de; min-height: 36px; }
+.blind-choice .bc-actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.blind-choice .bc-actions.single { grid-template-columns: 1fr; }
+.blind-choice button { font-size: 13px; padding: 10px 8px; }
+.tag-chip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #080b12aa;
+  border: 1px solid #ffffff22;
+  border-radius: 7px;
+  padding: 8px;
+  min-height: 58px;
+}
+.tag-chip .tag-icon { font-size: 24px; flex: 0 0 28px; text-align: center; }
+.tag-chip .tag-name { font-weight: 900; color: var(--gold); font-size: 13px; }
+.tag-chip .tag-desc { color: #cbd3df; font-size: 11px; line-height: 1.25; }
+.tag-strip {
+  width: min(960px, 100%);
+  background: #00000040;
+  border: 1px solid #ffffff18;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #cbd3df;
+}
+.tag-strip b { color: var(--gold); }
+
 /* ---------- 모바일 반응형 ---------- */
 @media (max-width: 640px) {
   :root { --card-w: 44px; --card-h: 66px; }
@@ -731,6 +794,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   #nextRoundBtn { padding: 12px 8px; }
   #shopBottomRow { flex-direction: column; }
   #shopItems { gap: 12px; }
+  .blind-select-wrap { grid-template-columns: 1fr; }
+  .blind-choice { min-height: 190px; }
 }
 </style>
 </head>
@@ -748,6 +813,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 </div>
 
 <!-- ===================== 게임 화면 ===================== -->
+<!-- ===================== Blind select / skip tags ===================== -->
+<div id="blindSelectScreen" class="screen">
+  <div class="title-big" style="font-size:42px;">Blind Select</div>
+  <div class="subtitle" id="blindSelectSub">Choose a blind or skip for a tag reward.</div>
+  <div id="activeTags" class="tag-strip"></div>
+  <div id="blindChoices" class="blind-select-wrap"></div>
+</div>
+
 <div id="gameScreen" class="screen">
   <div id="topBar">
     <div id="blindBox" class="blind-small">
@@ -1788,6 +1861,25 @@ const BOSS_BLINDS = [
   { id: 'club',    name: '클럽',     icon: '♣️', desc: '모든 클럽 카드가 디버프됩니다 (칩 0)', debuffSuit: 'club' },
 ];
 
+const TAGS = [
+  { id: 'uncommon', name: 'Uncommon Tag', icon: '◇', desc: 'Next shop has a free uncommon Joker.', apply() { addShopCoupon('joker', 'uncommon'); } },
+  { id: 'rare', name: 'Rare Tag', icon: '◆', desc: 'Next shop has a free rare Joker.', apply() { addShopCoupon('joker', 'rare'); } },
+  { id: 'foil', name: 'Foil Tag', icon: '▣', desc: 'Next shop has a free Foil Joker.', apply() { addShopCoupon('jokerEdition', 'foil'); } },
+  { id: 'holo', name: 'Holographic Tag', icon: '▤', desc: 'Next shop has a free Holographic Joker.', apply() { addShopCoupon('jokerEdition', 'holographic'); } },
+  { id: 'poly', name: 'Polychrome Tag', icon: '▥', desc: 'Next shop has a free Polychrome Joker.', apply() { addShopCoupon('jokerEdition', 'polychrome'); } },
+  { id: 'investment', name: 'Investment Tag', icon: '$', desc: 'Gain $25 immediately.', apply() { state.gold += 25; toast('Investment Tag: +$25'); } },
+  { id: 'economy', name: 'Economy Tag', icon: '$$', desc: 'Double money, max +$40.', apply() { const gain = Math.min(40, Math.max(0, state.gold)); state.gold += gain; toast(`Economy Tag: +$${gain}`); } },
+  { id: 'orbital', name: 'Orbital Tag', icon: '◎', desc: 'Upgrade a random played hand by 3 levels.', apply() { applyOrbitalTag(); } },
+  { id: 'standard', name: 'Standard Tag', icon: '🂠', desc: 'Open a free Mega Standard Pack.', apply() { openFreePack('standard', 'Mega ', 5, 2); } },
+  { id: 'charm', name: 'Charm Tag', icon: '✦', desc: 'Open a free Mega Arcana Pack.', apply() { openFreePack('arcana', 'Mega ', 5, 2); } },
+  { id: 'meteor', name: 'Meteor Tag', icon: '☄', desc: 'Open a free Mega Celestial Pack.', apply() { openFreePack('celestial', 'Mega ', 5, 2); } },
+  { id: 'buffoon', name: 'Buffoon Tag', icon: '☻', desc: 'Open a free Mega Buffoon Pack.', apply() { openFreePack('buffoon', 'Mega ', 4, 2); } },
+  { id: 'ethereal', name: 'Ethereal Tag', icon: '◌', desc: 'Open a free Spectral Pack.', apply() { openFreePack('spectral', '', 2, 1); } },
+  { id: 'coupon', name: 'Coupon Tag', icon: '%', desc: 'Next shop first buy slot is free.', apply() { state.shopFreeItems = (state.shopFreeItems || 0) + 1; } },
+  { id: 'double', name: 'Double Tag', icon: '×2', desc: 'Copy the next tag reward.', apply() { state.doubleTagNext = true; toast('Double Tag primed'); } },
+  { id: 'speed', name: 'Speed Tag', icon: '»', desc: 'Next shop rerolls start free.', apply() { state.freeRerollsNextShop = (state.freeRerollsNextShop || 0) + 2; } },
+];
+
 function isDebuffed(card) {
   return !!(state && state.boss && state.boss.debuffSuit === card.suit);
 }
@@ -1994,6 +2086,7 @@ function newGame() {
     endless: false,        // 앤티 8 클리어 후 무한 모드
     // 조커용 추적 변수
     handTypeCounts: {},    // 족보별 사용 횟수 (초신성)
+    handTypeCounts: {},
     roundHandTypes: [],    // 이번 라운드에 낸 족보 (카드 상어)
     planetsUsed: 0,        // 사용한 행성 카드 수 (별자리)
     planetsUniq: new Set(),// 사용한 행성 종류 (위성)
@@ -2014,13 +2107,21 @@ function newGame() {
     anteVoucher: null,        // 이번 앤티의 상점 바우처
     voucherAnte: 0,
     // 라운드별 상태 (startRound에서 초기화)
+    tagPool: [],
+    blindTags: {},
+    skippedThisAnte: [],
+    shopCoupons: [],
+    shopFreeItems: 0,
+    doubleTagNext: false,
+    freeRerollsNextShop: 0,
+    freeRerollsThisShop: 0,
     deck: [], hand: [], selected: new Set(),
     roundScore: 0, handsLeft: 0, discardsLeft: 0,
     discardedCardsThisRound: 0,
     busy: false,
   };
-  startRound();
-  showScreen('gameScreen');
+  prepareBlindSelect();
+  showScreen('blindSelectScreen');
 }
 
 function pickBoss() {
@@ -2035,7 +2136,7 @@ function effectiveHandSize() {
 }
 
 function startRound() {
-  state.boss = state.blindIdx === 2 ? pickBoss() : null;
+  state.boss = state.blindIdx === 2 ? (state.boss || pickBoss()) : null;
   state.deck = shuffle([...state.fullDeck]); // 영구 덱에서 라운드 덱 구성
   state.hand = [];
   state.selected = new Set();
@@ -2062,6 +2163,140 @@ function startRound() {
 
 function currentTarget() {
   return blindTarget(state.ante, state.blindIdx);
+}
+
+function refillTagPool() {
+  state.tagPool = shuffle([...TAGS]);
+}
+
+function drawTag() {
+  if (!state.tagPool || state.tagPool.length === 0) refillTagPool();
+  return state.tagPool.pop();
+}
+
+function tagKey(ante, blindIdx) {
+  return `${ante}:${blindIdx}`;
+}
+
+function ensureBlindTags() {
+  for (let i = 0; i < 2; i++) {
+    const key = tagKey(state.ante, i);
+    if (!state.blindTags[key]) state.blindTags[key] = drawTag();
+  }
+}
+
+function addShopCoupon(type, value) {
+  state.shopCoupons.push({ type, value });
+}
+
+function activeTagSummary() {
+  const bits = [];
+  if (state.shopCoupons.length) bits.push(`${state.shopCoupons.length} shop reward`);
+  if (state.shopFreeItems) bits.push(`${state.shopFreeItems} free item`);
+  if (state.freeRerollsNextShop) bits.push(`${state.freeRerollsNextShop} free reroll`);
+  if (state.doubleTagNext) bits.push('double next tag');
+  return bits;
+}
+
+function applyOrbitalTag() {
+  const keys = Object.keys(state.handTypeCounts || {});
+  const key = keys.length ? keys[Math.floor(Math.random() * keys.length)] : 'HIGH_CARD';
+  levelUpHand(key, 3);
+  toast(`Orbital Tag: ${HAND_TYPES[Object.keys(HAND_TYPES).find(k => HAND_TYPES[k].levelKey === key)]?.name || key} +3`);
+}
+
+function openFreePack(kindId, size, show, pick) {
+  openPack({ kindId, size, show, pick, cost: 0 });
+}
+
+function prepareBlindSelect() {
+  if (state.blindIdx === 2 && !state.boss) state.boss = pickBoss();
+  if (state.blindIdx !== 2) state.boss = null;
+  if (state.blindIdx === 0) state.skippedThisAnte = [];
+  ensureBlindTags();
+  renderBlindSelect();
+}
+
+function renderBlindSelect() {
+  el.blindSelectSub.textContent = `Ante ${state.ante} · choose the next blind`;
+  const active = activeTagSummary();
+  el.activeTags.innerHTML = active.length
+    ? `<b>Pending tag rewards:</b> ${active.join(' · ')}`
+    : '<b>Skip tags:</b> Small/Big blinds can be skipped for a reward. Boss blinds must be played.';
+  el.blindChoices.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const isCurrent = i === state.blindIdx;
+    const skipped = state.skippedThisAnte.includes(i);
+    const locked = i < state.blindIdx || skipped || i > state.blindIdx;
+    const tag = i < 2 ? state.blindTags[tagKey(state.ante, i)] : null;
+    const card = document.createElement('div');
+    card.className = 'blind-choice' + (isCurrent ? ' current' : '') + (locked && !isCurrent ? ' locked' : '');
+    const desc = i === 2
+      ? (state.boss && isCurrent ? `${state.boss.name}: ${state.boss.desc}` : 'Defeat the boss to advance the ante.')
+      : 'Play for gold, or skip for the tag below.';
+    card.innerHTML =
+      `<div class="bc-icon">${BLIND_ICONS[i]}</div>` +
+      `<div class="bc-name">${BLIND_NAMES[i]}</div>` +
+      `<div class="bc-target">${blindTarget(state.ante, i).toLocaleString()} score</div>` +
+      `<div class="bc-desc">${desc}</div>` +
+      (tag ? tagChipHTML(tag) : '<div class="tag-chip"><div class="tag-icon">♛</div><div><div class="tag-name">Boss Blind</div><div class="tag-desc">No skip reward.</div></div></div>');
+    const actions = document.createElement('div');
+    actions.className = 'bc-actions' + (i === 2 ? ' single' : '');
+    if (isCurrent) {
+      const play = document.createElement('button');
+      play.className = 'btn-primary';
+      play.textContent = 'Play Blind';
+      play.addEventListener('click', playSelectedBlind);
+      actions.appendChild(play);
+      if (i < 2) {
+        const skip = document.createElement('button');
+        skip.className = 'btn-blue';
+        skip.textContent = 'Skip for Tag';
+        skip.addEventListener('click', skipSelectedBlind);
+        actions.appendChild(skip);
+      }
+    } else {
+      const note = document.createElement('button');
+      note.disabled = true;
+      note.textContent = skipped ? 'Skipped' : (i < state.blindIdx ? 'Cleared' : 'Locked');
+      actions.classList.add('single');
+      actions.appendChild(note);
+    }
+    card.appendChild(actions);
+    el.blindChoices.appendChild(card);
+  }
+}
+
+function tagChipHTML(tag) {
+  return `<div class="tag-chip"><div class="tag-icon">${tag.icon}</div><div><div class="tag-name">${tag.name}</div><div class="tag-desc">${tag.desc}</div></div></div>`;
+}
+
+function playSelectedBlind() {
+  sfx.select();
+  startRound();
+  showScreen('gameScreen');
+}
+
+function skipSelectedBlind() {
+  if (state.blindIdx >= 2) return;
+  const tag = state.blindTags[tagKey(state.ante, state.blindIdx)];
+  applyTag(tag);
+  state.skippedThisAnte.push(state.blindIdx);
+  state.blindIdx++;
+  sfx.buy();
+  prepareBlindSelect();
+}
+
+function applyTag(tag) {
+  if (!tag) return;
+  tag.apply();
+  if (state.doubleTagNext && tag.id !== 'double') {
+    state.doubleTagNext = false;
+    tag.apply();
+    toast(`${tag.name} copied by Double Tag`);
+  } else {
+    toast(`${tag.name} claimed`);
+  }
 }
 
 /* ============================================================
@@ -2098,8 +2333,9 @@ const sfx = {
    ui — DOM 렌더링 (Milestone 1, 3, 5, 6)
    ============================================================ */
 const el = {};
-['startScreen', 'gameScreen', 'shopScreen', 'gameoverScreen', 'clearBanner',
+['startScreen', 'blindSelectScreen', 'gameScreen', 'shopScreen', 'gameoverScreen', 'clearBanner',
  'victoryStats', 'endlessBtn', 'victoryNewBtn',
+ 'blindSelectSub', 'activeTags', 'blindChoices',
  'blindBox', 'blindBadge', 'blindName', 'blindDesc', 'progressFill', 'progressText',
  'anteVal', 'handsVal', 'discardsVal', 'goldVal',
  'jokerArea', 'playedCards', 'handResult', 'handArea', 'deckCount', 'deckCountText',
@@ -2605,8 +2841,8 @@ function advanceBlind() {
     state.blindIdx = 0;
     state.ante++;
   }
-  startRound();
-  showScreen('gameScreen');
+  prepareBlindSelect();
+  showScreen('blindSelectScreen');
 }
 
 function gameOver() {
@@ -2649,6 +2885,11 @@ function randomShopJoker(excludeIds) {
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
 }
 
+function randomJokerByRarity(rarity, excludeIds) {
+  const pool = JOKERS.filter(j => j.rarity === rarity && !excludeIds.has(j.id));
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : randomShopJoker(excludeIds);
+}
+
 function rollJokerEdition() {
   const m = hasVoucher('hone') ? 2 : 1; // '연마' 바우처: 에디션 2배
   const r = Math.random();
@@ -2681,6 +2922,25 @@ function stockShop() {
       ? { kind: 'consum', c: { kind: 'tarot', def: randTarot() }, sold: false }
       : { kind: 'consum', c: { kind: 'planet', def: randPlanet() }, sold: false });
   }
+  if (state.shopCoupons && state.shopCoupons.length) {
+    const coupons = state.shopCoupons.splice(0);
+    coupons.forEach(coupon => {
+      let joker = null, edition = null;
+      if (coupon.type === 'joker') joker = randomJokerByRarity(coupon.value, exclude);
+      else if (coupon.type === 'jokerEdition') {
+        joker = randomShopJoker(exclude);
+        edition = coupon.value;
+      }
+      if (joker) {
+        exclude.add(joker.id);
+        shopStock.push({ kind: 'joker', joker, edition, sold: false, forcedFree: true, tagReward: true });
+      }
+    });
+  }
+  if (state.shopFreeItems > 0) {
+    shopStock.slice(0, state.shopFreeItems).forEach(item => { item.forcedFree = true; });
+    state.shopFreeItems = Math.max(0, state.shopFreeItems - shopStock.length);
+  }
 }
 
 let shopPacks = [];
@@ -2702,6 +2962,7 @@ function discounted(p) { // '정리 세일' 바우처: 25% 할인
   return hasVoucher('clearance') ? Math.max(1, Math.round(p * 0.75)) : p;
 }
 function shopItemPrice(item) {
+  if (item.forcedFree) return 0;
   if (item.kind === 'joker') return discounted(item.joker.cost + (item.edition ? ED_PRICE[item.edition] : 0));
   if (item.c.kind === 'planet') return planetPrice() === 0 ? 0 : discounted(planetPrice());
   return discounted(TAROT_COST);
@@ -2715,6 +2976,7 @@ function canAfford(cost) {
 function planetPrice() { return hasJoker('astronomer') ? 0 : PLANET_COST; }
 
 function rerollCostNow() {
+  if (state.freeRerollsThisShop > 0) return 0;
   if (hasJoker('chaos') && !state.freeRerollUsed) return 0;
   return Math.max(0, state.rerollCost - (hasVoucher('reroll_surplus') ? 2 : 0));
 }
@@ -2723,7 +2985,8 @@ function rerollShop() {
   const cost = rerollCostNow();
   if (!canAfford(cost)) return;
   state.gold -= cost;
-  if (cost === 0) state.freeRerollUsed = true;
+  if (cost === 0 && state.freeRerollsThisShop > 0) state.freeRerollsThisShop--;
+  else if (cost === 0) state.freeRerollUsed = true;
   else state.rerollCost++;
   state.rerolls++; // 플래시 카드
   sfx.discard();
@@ -2733,6 +2996,8 @@ function rerollShop() {
 
 function openShop() {
   state.freeRerollUsed = false;
+  state.freeRerollsThisShop = state.freeRerollsNextShop || 0;
+  state.freeRerollsNextShop = 0;
   state.rerollCost = 5;
   stockShop();
   stockPacks();
@@ -3027,7 +3292,8 @@ function pickFromPack(i) {
 function closePack() {
   packState = null;
   el.packModal.classList.remove('show');
-  renderShop();
+  if (el.shopScreen.classList.contains('active')) renderShop();
+  else if (el.blindSelectScreen.classList.contains('active')) renderBlindSelect();
 }
 
 function sellJoker(jokerIdx) {
