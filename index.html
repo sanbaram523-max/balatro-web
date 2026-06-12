@@ -2133,15 +2133,20 @@ function cardEl(card, opts = {}) {
       center +
       `<div class="corner bottom">${card.rank}<br>${card.sym}</div>`;
   }
-  // 강화/에디션/인장 표시
+  // 강화/에디션/인장 표시 + 호버 툴팁으로 효과 설명
   const tips = [];
-  if (card.enhancement) { div.classList.add('enh-' + card.enhancement); tips.push(ENH_NAMES[card.enhancement]); }
-  if (card.edition) { div.classList.add('ed-' + card.edition); tips.push(ED_NAMES[card.edition]); }
+  if (card.enhancement) { div.classList.add('enh-' + card.enhancement); tips.push(`🔧 ${ENH_NAMES[card.enhancement]}`); }
+  if (card.edition) { div.classList.add('ed-' + card.edition); tips.push(`✨ ${ED_NAMES[card.edition]}`); }
   if (card.seal) {
     div.innerHTML += `<span class="seal-dot" style="background:${SEAL_COLORS[card.seal]}"></span>`;
-    tips.push(SEAL_NAMES[card.seal]);
+    tips.push(`<span style="color:${SEAL_COLORS[card.seal]}">●</span> ${SEAL_NAMES[card.seal]}`);
   }
-  if (tips.length) div.title = tips.join(' / ');
+  if (tips.length) {
+    const cardName = card.enhancement === 'stone' ? '🪨 스톤 카드' : `${card.rank}${card.sym} 카드`;
+    attachTip(div,
+      `<div class="t-name">${cardName}</div>` +
+      tips.map(t => `<div>${t}</div>`).join(''));
+  }
   if (opts.dealt) {
     div.classList.add('dealt');
     div.style.animationDelay = (opts.delay || 0) + 'ms';
