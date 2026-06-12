@@ -162,6 +162,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   display: flex;
   gap: 10px;
   align-items: center;
+  overflow-x: auto;   /* 조커가 많아도 아래로 늘어나지 않고 가로 스크롤 */
+  overflow-y: hidden;
 }
 #jokerArea .area-label {
   writing-mode: vertical-rl;
@@ -170,27 +172,57 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   letter-spacing: 2px;
 }
 .joker-card {
-  width: 110px;
-  min-height: 78px;
+  width: 116px;
+  height: 84px;            /* 높이 고정 — 설명이 길어도 카드가 늘어나지 않음 */
   background: linear-gradient(145deg, var(--j-c1, #5a3d8a), var(--j-c2, #3d2960));
   border: 2px solid var(--j-border, #8a6cc0);
   border-radius: 10px;
-  padding: 7px 9px;
-  font-size: 11px;
+  padding: 6px 8px;
+  font-size: 10px;
   position: relative;
   flex-shrink: 0;
   display: flex;
   gap: 7px;
   align-items: center;
+  overflow: hidden;
+  cursor: help;
 }
 .joker-card .j-icon {
-  font-size: 26px;
+  font-size: 24px;
   flex-shrink: 0;
   filter: drop-shadow(1px 2px 1px #00000066);
 }
 .joker-card .j-text { flex: 1; min-width: 0; }
-.joker-card .j-name { font-weight: 700; color: var(--gold); font-size: 12px; margin-bottom: 3px; }
-.joker-card .j-desc { opacity: 0.9; line-height: 1.35; }
+.joker-card .j-name {
+  font-weight: 700; color: var(--gold); font-size: 11px; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.joker-card .j-desc {
+  opacity: 0.9; line-height: 1.3;
+  display: -webkit-box;            /* 설명은 최대 2줄 + 말줄임 */
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 호버/탭 툴팁 — 전체 설명 표시 */
+#jtip {
+  position: fixed;
+  z-index: 400;
+  max-width: 250px;
+  background: #16121f;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 6px 18px #000000cc;
+  pointer-events: none;
+  display: none;
+}
+#jtip.show { display: block; }
+#jtip .t-name { font-weight: 700; color: var(--gold); font-size: 13px; margin-bottom: 4px; }
+#jtip .t-extra { color: #9fd8ff; font-size: 11px; margin-top: 4px; }
 .joker-card.pop { animation: jokerPop 0.35s ease; }
 @keyframes jokerPop {
   0% { transform: scale(1); }
@@ -448,8 +480,17 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   flex-shrink: 0;
 }
 .consum-card.tarot { background: linear-gradient(145deg, #5e3a78, #37204a); border-color: #9a6cc8; }
-.consum-card .c-name { font-weight: 700; color: var(--gold); font-size: 11px; }
-.consum-card .c-desc { opacity: 0.9; line-height: 1.3; margin: 2px 0 4px; }
+.consum-card .c-name {
+  font-weight: 700; color: var(--gold); font-size: 11px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.consum-card .c-desc {
+  opacity: 0.9; line-height: 1.3; margin: 2px 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .consum-card .c-btns { display: flex; gap: 4px; }
 .consum-card .c-btns button { font-size: 10px; padding: 3px 9px; border-radius: 5px; }
 .use-btn { background: var(--blue); color: #fff; }
@@ -604,8 +645,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   .card .face-frame { font-size: 19px; }
   .card .face-frame::before, .card .face-frame::after { font-size: 6px; }
   .info-box .value { font-size: 15px; }
-  .joker-card { width: 88px; font-size: 10px; min-height: 68px; flex-direction: column; gap: 2px; text-align: center; }
-  .joker-card .j-icon { font-size: 18px; }
+  .joker-card { width: 92px; height: 76px; font-size: 9px; flex-direction: column; gap: 1px; text-align: center; }
+  .joker-card .j-icon { font-size: 16px; }
+  .joker-card .j-desc { -webkit-line-clamp: 2; }
   .joker-slot-empty { width: 88px; min-height: 68px; }
   #playBtn, #discardBtn { font-size: 15px; padding: 12px 22px; }
   #handArea { gap: 3px; }
@@ -733,6 +775,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 <!-- ===================== 토스트 메시지 ===================== -->
 <div id="toast"></div>
+
+<!-- ===================== 조커/소모품 툴팁 ===================== -->
+<div id="jtip"></div>
 
 <!-- ===================== 라운드 클리어 배너 ===================== -->
 <div id="clearBanner">
@@ -1962,7 +2007,7 @@ const el = {};
  'blindBox', 'blindBadge', 'blindName', 'blindDesc', 'progressFill', 'progressText',
  'anteVal', 'handsVal', 'discardsVal', 'goldVal',
  'jokerArea', 'playedCards', 'handResult', 'handArea', 'deckCount', 'deckCountText',
- 'consumArea', 'shopConsums', 'toast', 'deckBtn', 'deckModal', 'deckModalInner',
+ 'consumArea', 'shopConsums', 'toast', 'jtip', 'deckBtn', 'deckModal', 'deckModalInner',
  'deckModalBody', 'deckModalCount', 'deckCloseBtn',
  'playBtn', 'discardBtn', 'sortBtn', 'newGameBtn', 'retryBtn',
  'shopGold', 'shopItems', 'ownedJokers', 'nextRoundBtn', 'rerollBtn',
@@ -2052,7 +2097,11 @@ function jokerCardEl(joker) {
     `<span class="j-rarity" style="color:${rar.color}">${rar.name || '?'}</span></div>` +
     `<div class="j-desc">${desc}</div>${edLine}</div>`;
   if (joker.edition) div.classList.add('ed-' + joker.edition);
-  div.title = `[${rar.name || '?'}] ${joker.name}`;
+  attachTip(div,
+    `<div class="t-name">${joker.icon || '🃏'} ${joker.name} <span class="j-rarity" style="color:${rar.color}">${rar.name || '?'}</span></div>` +
+    `<div>${desc}</div>` +
+    (joker.edition ? `<div class="t-extra">✨ ${ED_NAMES[joker.edition]}</div>` : '') +
+    (joker.sellValue ? `<div class="t-extra">판매가 $${joker.sellValue}</div>` : ''));
   return div;
 }
 
@@ -2060,17 +2109,18 @@ function jokerCardEl(joker) {
 function consumEl(item) {
   const div = document.createElement('div');
   div.className = 'consum-card' + (item.kind === 'tarot' ? ' tarot' : item.kind === 'spectral' ? ' spectral' : '');
+  let descText;
   if (item.kind === 'planet') {
     const type = HAND_TYPES[item.def.key];
     const lv = handLevel(type);
-    div.innerHTML =
-      `<div class="c-name">${item.def.icon} ${item.def.name}</div>` +
-      `<div class="c-desc">${type.name} Lv.${lv}→${lv + 1} (+${type.upChips}칩 / 배수 +${type.upMult})</div>`;
+    descText = `${type.name} Lv.${lv}→${lv + 1} (+${type.upChips}칩 / 배수 +${type.upMult})`;
   } else {
-    div.innerHTML =
-      `<div class="c-name">${item.def.icon} ${item.def.name}</div>` +
-      `<div class="c-desc">${item.def.desc}</div>`;
+    descText = item.def.desc;
   }
+  div.innerHTML =
+    `<div class="c-name">${item.def.icon} ${item.def.name}</div>` +
+    `<div class="c-desc">${descText}</div>`;
+  attachTip(div, `<div class="t-name">${item.def.icon} ${item.def.name}</div><div>${descText}</div>`);
   return div;
 }
 
@@ -2139,6 +2189,34 @@ function sellConsumable(i) {
   renderConsumables();
   if (document.getElementById('shopScreen').classList.contains('active')) renderShop();
 }
+
+/* ---------- 툴팁 (조커/소모품 전체 설명) ---------- */
+function attachTip(div, html) {
+  const show = () => {
+    el.jtip.innerHTML = html;
+    el.jtip.classList.add('show');
+    const r = div.getBoundingClientRect();
+    const t = el.jtip.getBoundingClientRect();
+    let x = r.left + r.width / 2 - t.width / 2;
+    x = Math.max(8, Math.min(x, window.innerWidth - t.width - 8));
+    let y = r.bottom + 8;
+    if (y + t.height > window.innerHeight - 8) y = r.top - t.height - 8;
+    el.jtip.style.left = x + 'px';
+    el.jtip.style.top = Math.max(8, y) + 'px';
+  };
+  const hide = () => el.jtip.classList.remove('show');
+  div.addEventListener('mouseenter', show);
+  div.addEventListener('mouseleave', hide);
+  // 모바일: 탭하면 토글
+  div.addEventListener('touchstart', e => {
+    if (el.jtip.classList.contains('show')) hide();
+    else { show(); e.stopPropagation(); }
+  }, { passive: true });
+}
+document.addEventListener('touchstart', () => {
+  const t = document.getElementById('jtip');
+  if (t) t.classList.remove('show');
+}, { passive: true });
 
 /* ---------- 토스트 / 덱 보기 ---------- */
 let toastTimer = null;
