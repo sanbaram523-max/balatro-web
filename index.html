@@ -3061,10 +3061,12 @@ function renderDeckModal() {
       mini.className = `deck-mini ${SUIT_CLASS[s.key]}`;
       mini.innerHTML = `<span>${c.rank}</span><span>${c.sym}</span>`;
       const tips = [];
-      if (c.enhancement) { tips.push(ENH_NAMES[c.enhancement]); mini.style.background = '#ffe9b0'; }
-      if (c.edition) tips.push(ED_NAMES[c.edition]);
-      if (c.seal) { tips.push(SEAL_NAMES[c.seal]); mini.innerHTML += `<span class="seal-dot" style="background:${SEAL_COLORS[c.seal]}; width:8px; height:8px; top:2px; right:2px; position:absolute;"></span>`; }
-      if (tips.length) mini.title = tips.join(' / ');
+      if (c.enhancement) { tips.push(`🔧 ${ENH_NAMES[c.enhancement]}`); mini.style.background = '#ffe9b0'; }
+      if (c.edition) tips.push(`✨ ${ED_NAMES[c.edition]}`);
+      if (c.seal) { tips.push(`<span style="color:${SEAL_COLORS[c.seal]}">●</span> ${SEAL_NAMES[c.seal]}`); mini.innerHTML += `<span class="seal-dot" style="background:${SEAL_COLORS[c.seal]}; width:8px; height:8px; top:2px; right:2px; position:absolute;"></span>`; }
+      if (tips.length) {
+        attachTip(mini, `<div class="t-name">${c.rank}${c.sym} 카드</div>` + tips.map(t => `<div>${t}</div>`).join(''));
+      }
       row.appendChild(mini);
     });
     el.deckModalBody.appendChild(row);
